@@ -22,9 +22,19 @@ export default function Login() {
     setLoading(true);
 
     try {
-      const data = await handleLoginMock(email);
-      loginAction(data.user, data.token);
-      navigate(data.user.role === 'admin' ? '/dashboard' : '/shop');
+      if (isAdminMode) {
+        if (email.toLowerCase() === 'salesadmin' && password === '123456') {
+          const data = { token: "admin_token_123", user: { id: 1, name: "Admin", role: "admin" } };
+          loginAction(data.user as any, data.token);
+          navigate('/dashboard');
+        } else {
+          setError('Invalid admin credentials. Try again.');
+        }
+      } else {
+        const data = await handleLoginMock(email);
+        loginAction(data.user, data.token);
+        navigate('/shop');
+      }
     } catch (err) {
       setError('Invalid credentials. Try again.');
     } finally {
@@ -81,10 +91,10 @@ export default function Login() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="appearance-none rounded-xl relative block w-full px-3 py-3 pl-10 border border-gray-200 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 focus:z-10 sm:text-sm bg-gray-50"
-                placeholder={isAdminMode ? "Admin ID" : "Email address or Username"}
+                placeholder={isAdminMode ? "Admin ID" : "Email address"}
               />
             </div>
-            {!isAdminMode && (
+            {(!isAdminMode || isAdminMode) && (
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <Lock className="h-5 w-5 text-gray-400" />
@@ -104,7 +114,6 @@ export default function Login() {
 
           <div className="flex items-center justify-between">
             <div className="flex items-center text-sm">
-              {isAdminMode && <span className="text-gray-500">Admin Mock ID: Salesadmin</span>}
             </div>
             {isLogin && !isAdminMode && (
               <div className="text-sm">
