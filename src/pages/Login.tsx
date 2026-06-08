@@ -1,9 +1,9 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { handleLoginMock } from '../lib/api';
 import { useAuthStore } from '../store';
 import { motion } from 'motion/react';
-import { User, Lock, Mail, ShieldAlert } from 'lucide-react';
+import { User as UserIcon, Lock, Mail, ShieldAlert } from 'lucide-react';
 
 export default function Login() {
   const [isLogin, setIsLogin] = useState(true);
@@ -24,15 +24,15 @@ export default function Login() {
     try {
       if (isAdminMode) {
         if (email.toLowerCase() === 'salesadmin' && password === '123456') {
-          const data = { token: "admin_token_123", user: { id: 1, name: "Admin", role: "admin" } };
-          loginAction(data.user as any, data.token);
+          const data = { token: "admin_token_123", user: { id: 1, name: "Admin", role: "admin" as const } };
+          loginAction(data.user, data.token);
           navigate('/dashboard');
         } else {
           setError('Invalid admin credentials. Try again.');
         }
       } else {
         const data = await handleLoginMock(email);
-        loginAction(data.user, data.token);
+        loginAction(data.user as any, data.token);
         navigate('/shop');
       }
     } catch (err) {
@@ -69,7 +69,7 @@ export default function Login() {
             {!isAdminMode && !isLogin && (
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <User className="h-5 w-5 text-gray-400" />
+                  <UserIcon className="h-5 w-5 text-gray-400" />
                 </div>
                 <input
                   name="name"

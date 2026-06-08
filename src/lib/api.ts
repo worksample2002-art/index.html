@@ -77,7 +77,7 @@ export async function getProducts(category?: string) {
     }
     const snap = await getDocs(q);
     if (snap.empty) return category ? initialProducts.filter(p=>p.category===category) : initialProducts;
-    return snap.docs.map(d => ({ id: d.id, ...d.data() } as Product));
+    return snap.docs.map(d => ({ id: d.id, ...(d.data() as any) } as Product));
   } catch(e) {
     return category ? initialProducts.filter(p=>p.category===category) : initialProducts;
   }
@@ -100,6 +100,29 @@ export async function deleteProduct(id: string) {
 // Categories
 export async function getCategories() {
   return ["Cream Biscuits", "Chocolate Biscuits", "Butter Cookies", "Digestive Biscuits", "Crackers", "Kids Biscuits", "Premium Biscuits", "Sugar-Free Biscuits"];
+}
+
+// Wishlist
+export async function getWishlist(userId: string): Promise<string[]> {
+  try {
+    const snap = await getDocs(collection(db, `users/${userId}/wishlist`));
+    if (snap.empty) return [];
+    return snap.docs.map(d => d.id);
+  } catch (e) {
+    return [];
+  }
+}
+
+export async function toggleWishlistAPI(userId: string, productId: string, isWished: boolean) {
+  try {
+    if (isWished) {
+      await setDoc(doc(db, `users/${userId}/wishlist`, productId), { addedAt: new Date().toISOString() });
+    } else {
+      await deleteDoc(doc(db, `users/${userId}/wishlist`, productId));
+    }
+  } catch (e) {
+    console.error("Error toggling wishlist", e);
+  }
 }
 
 // Admin Mock Check

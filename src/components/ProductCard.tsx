@@ -1,11 +1,25 @@
+import React from 'react';
 import { Link } from 'react-router-dom';
 import { ShoppingCart, Star, Heart } from 'lucide-react';
 import { Product } from '../types';
-import { useCartStore } from '../store';
+import { useCartStore, useWishlistStore, useAuthStore } from '../store';
+import { toggleWishlistAPI } from '../lib/api';
 import { motion } from 'motion/react';
 
-export default function ProductCard({ product }: { product: Product }) {
+export default function ProductCard({ product }: { product: Product; key?: React.Key }) {
   const addToCart = useCartStore(state => state.addToCart);
+  const { wishlist, toggleFavorite } = useWishlistStore();
+  const user = useAuthStore(state => state.user);
+
+  const isWished = wishlist.includes(product.id.toString());
+
+  const handleWishlistToggle = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    toggleFavorite(product.id.toString());
+    if (user) {
+      await toggleWishlistAPI(user.id.toString(), product.id.toString(), !isWished);
+    }
+  };
 
   return (
     <motion.div 
@@ -21,8 +35,13 @@ export default function ProductCard({ product }: { product: Product }) {
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
           />
         </Link>
-        <button className="absolute top-3 right-3 p-2 bg-white/80 backdrop-blur rounded-full text-gray-400 hover:text-orange-500 hover:bg-white transition-colors opacity-0 group-hover:opacity-100">
-          <Heart className="w-4 h-4" />
+        <button 
+          onClick={handleWishlistToggle}
+          className={`absolute top-3 right-3 p-2 rounded-full transition-colors z-10 
+            ${isWished ? 'bg-white text-rose-500 opacity-100' : 'bg-white/80 backdrop-blur text-gray-400 hover:text-rose-500 hover:bg-white opacity-0 group-hover:opacity-100'}
+          `}
+        >
+          <Heart className={`w-4 h-4 ${isWished ? 'fill-rose-500' : ''}`} />
         </button>
         {product.stock < 50 && (
           <span className="absolute top-3 left-3 bg-rose-500 text-white text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider">

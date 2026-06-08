@@ -17,8 +17,25 @@ import Dashboard from './pages/Dashboard';
 import StaticPage from './pages/StaticPage';
 import Contact from './pages/Contact';
 import Blog from './pages/Blog';
+import Wishlist from './pages/Wishlist';
+import { useEffect } from 'react';
+import { useAuthStore, useWishlistStore } from './store';
+import { getWishlist } from './lib/api';
 
 export default function App() {
+  const user = useAuthStore(state => state.user);
+  const setWishlist = useWishlistStore(state => state.setWishlist);
+
+  useEffect(() => {
+    if (user) {
+      getWishlist(user.id.toString()).then(ids => {
+        setWishlist(ids);
+      });
+    } else {
+      setWishlist([]); // clear wishlist on logout
+    }
+  }, [user, setWishlist]);
+
   return (
     <BrowserRouter>
       <div className="flex flex-col min-h-screen bg-slate-50 font-sans">
@@ -40,6 +57,7 @@ export default function App() {
             <Route path="/shipping" element={<StaticPage slug="shipping" />} />
             <Route path="/login" element={<Login />} />
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/wishlist" element={<Wishlist />} />
             {/* Fallback route */}
             <Route path="*" element={<div className="p-20 text-center font-bold text-2xl text-emerald-800">Coming Soon</div>} />
           </Routes>

@@ -1,17 +1,19 @@
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ShoppingCart, User, Menu, Search, X } from 'lucide-react';
-import { useCartStore, useAuthStore } from '../store';
-import { useState } from 'react';
+import { ShoppingCart, User, Menu, Search, X, Heart } from 'lucide-react';
+import { useCartStore, useAuthStore, useWishlistStore } from '../store';
 
 export default function Navbar() {
   const items = useCartStore(state => state.items);
   const user = useAuthStore(state => state.user);
+  const wishlist = useWishlistStore(state => state.wishlist);
   const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const navigate = useNavigate();
 
   const cartCount = items.reduce((acc, item) => acc + item.quantity, 0);
+  const wishlistCount = wishlist.length;
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -46,6 +48,14 @@ export default function Navbar() {
             >
               <Search className="w-5 h-5" />
             </button>
+            <Link to="/wishlist" className="relative text-gray-600 hover:text-rose-500 transition-colors hidden sm:block">
+              <Heart className="w-5 h-5" />
+              {wishlistCount > 0 && (
+                <span className="absolute -top-2 -right-2 bg-rose-500 text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
+                  {wishlistCount}
+                </span>
+              )}
+            </Link>
             <Link to="/cart" className="relative text-gray-600 hover:text-emerald-600 transition-colors">
               <ShoppingCart className="w-5 h-5" />
               {cartCount > 0 && (

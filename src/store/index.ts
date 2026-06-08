@@ -43,3 +43,21 @@ export const useAuthStore = create<AuthState>((set) => ({
   login: (user, token) => set({ user, token }),
   logout: () => set({ user: null, token: null }),
 }));
+
+interface WishlistState {
+  wishlist: string[];
+  setWishlist: (ids: string[]) => void;
+  toggleFavorite: (productId: string) => void;
+}
+
+export const useWishlistStore = create<WishlistState>((set) => ({
+  wishlist: [],
+  setWishlist: (ids) => set({ wishlist: ids }),
+  toggleFavorite: (productId) => set((state) => {
+    const exists = state.wishlist.includes(productId);
+    if (exists) {
+      return { wishlist: state.wishlist.filter(id => id !== productId) };
+    }
+    return { wishlist: [...state.wishlist, productId] };
+  })
+}));

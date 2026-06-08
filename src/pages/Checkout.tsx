@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useCartStore } from '../store';
 import { useNavigate } from 'react-router-dom';
 
