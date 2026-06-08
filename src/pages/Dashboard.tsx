@@ -96,7 +96,7 @@ export default function Dashboard() {
   }, [user]);
 
   const handleAddProduct = () => {
-    setProductForm({ id: '', name: '', price: '100', stock: '50', category: categories[0]?.name || 'Premium Biscuits', image: '', description: '', brand: 'Bazar' });
+    setProductForm({ id: '', name: '', price: '100', stock: '50', category: categories[0]?.name || 'Premium Biscuits', image: '', description: '', brand: brands[0]?.name || 'Bazar' });
     setIsProductModalOpen(true);
   };
 
@@ -1280,6 +1280,13 @@ export default function Dashboard() {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Stock</label>
                     <input required type="number" value={productForm.stock} onChange={e => setProductForm({...productForm, stock: e.target.value})} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2 focus:ring-2 focus:ring-emerald-500 outline-none" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Brand</label>
+                    <select required value={productForm.brand} onChange={e => setProductForm({...productForm, brand: e.target.value})} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2 focus:ring-2 focus:ring-emerald-500 outline-none">
+                      {brands.map((brand, idx) => <option key={idx} value={brand.name}>{brand.name}</option>)}
+                      {!brands.some((b: any) => b.name === productForm.brand) && productForm.brand && <option value={productForm.brand}>{productForm.brand}</option>}
+                    </select>
                   </div>
                   <div className="md:col-span-2">
                     <ImageUploader 
