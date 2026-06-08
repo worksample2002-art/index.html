@@ -3,13 +3,14 @@ import { Link } from 'react-router-dom';
 import { ArrowRight, Truck, ShieldCheck, Clock } from 'lucide-react';
 import ProductCard from '../components/ProductCard';
 import { Product } from '../types';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { getBanners, getProducts } from '../lib/api';
 
 export default function Home() {
   const [products, setProducts] = useState<Product[]>([]);
-  const [banners, setBanners] = useState<{id: number, image: string, title: string}[]>([]);
+  const [banners, setBanners] = useState<{id: string, image: string, title: string, description?: string, link?: string}[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeSlide, setActiveSlide] = useState(0);
 
   useEffect(() => {
     Promise.all([
@@ -22,44 +23,90 @@ export default function Home() {
     });
   }, []);
 
+  useEffect(() => {
+    if (banners.length <= 1) return;
+    const interval = setInterval(() => {
+      setActiveSlide((prev) => (prev + 1) % banners.length);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [banners.length]);
+
   return (
     <div className="min-h-screen bg-slate-50 overflow-x-hidden">
-      {/* Hero Section */}
+      {/* Hero Slider Section */}
       <section className="relative bg-emerald-900 overflow-hidden">
-        <div className="absolute inset-0">
-          <img 
-            src="https://images.unsplash.com/photo-1558961363-fa8fdf82db35?auto=format&fit=crop&w=1920&q=80" 
-            alt="Hero Background" 
-            className="w-full h-full object-cover opacity-20"
-          />
-          <div className="absolute inset-0 bg-gradient-to-r from-emerald-900 to-transparent"></div>
-        </div>
-        
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 py-24 md:py-32">
-          <motion.div 
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.6 }}
-            className="max-w-2xl space-y-8"
-          >
-            <span className="inline-block py-1 px-3 rounded-full bg-orange-500/20 text-orange-400 text-sm font-bold tracking-wider uppercase border border-orange-500/50">
-              Premium Quality
-            </span>
+        {loading ? (
+          <div className="flex justify-center items-center h-[60vh] min-h-[400px] w-full">
+            <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+          </div>
+        ) : banners.length > 0 ? (
+          <div className="relative w-full overflow-hidden flex items-center h-[60vh] min-h-[400px]">
+            <AnimatePresence>
+              {banners.map((banner, idx) => (
+                idx === activeSlide && (
+                  <motion.div 
+                    key={`${banner.id}-${idx}`} 
+                    className="absolute inset-0 h-full w-[100vw] overflow-hidden group"
+                    initial={{ opacity: 0, x: 100 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -100 }}
+                    transition={{ duration: 0.8 }}
+                  >
+                    <img src={banner.image} alt={banner.title} className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 opacity-60" />
+                    <div className="absolute inset-0 bg-gradient-to-r from-gray-900/80 via-gray-900/40 to-transparent"></div>
+                    
+                    <div className="absolute inset-0 flex flex-col justify-center px-4 sm:px-12 lg:px-24">
+                      <motion.div 
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.6, delay: 0.3 }}
+                        className="max-w-3xl space-y-6"
+                      >
+                        {banner.title && (
+                          <h2 className="text-4xl md:text-6xl font-black text-white leading-tight tracking-tight uppercase shadow-sm">
+                            {banner.title}
+                          </h2>
+                        )}
+                        {banner.description && (
+                          <p className="text-xl md:text-2xl text-emerald-50 max-w-2xl leading-relaxed drop-shadow-md font-medium">
+                            {banner.description}
+                          </p>
+                        )}
+                        
+                        {banner.link && (
+                          <div className="pt-4">
+                            <Link to={banner.link} className="inline-flex px-8 py-4 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-full shadow-lg transition-all items-center gap-2">
+                              Explore Now <ArrowRight className="w-5 h-5" />
+                            </Link>
+                          </div>
+                        )}
+                      </motion.div>
+                    </div>
+                  </motion.div>
+                )
+              ))}
+            </AnimatePresence>
+            
+            {/* Slider Controls */}
+            {banners.length > 1 && (
+              <div className="absolute bottom-8 left-0 right-0 flex justify-center gap-3 z-20">
+                {banners.map((_, idx) => (
+                  <button 
+                    key={idx}
+                    onClick={() => setActiveSlide(idx)}
+                    className={`w-3 h-3 rounded-full transition-all ${idx === activeSlide ? 'bg-orange-500 scale-125' : 'bg-white/50 hover:bg-white/80'}`}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="flex justify-center items-center h-[60vh] min-h-[400px] w-full bg-emerald-900 px-4 text-center">
             <h1 className="text-4xl md:text-6xl font-black text-white leading-tight tracking-tight">
-              Bite into <br/>
-              <span className="text-orange-400">Happiness</span> <br/>
-              Every Day.
+              Bite into <span className="text-orange-400">Happiness</span> Every Day.
             </h1>
-            <p className="text-lg text-emerald-100 max-w-xl leading-relaxed">
-              Discover the finest collection of local and international biscuits. Handpicked for your perfect tea-time and snacking moments.
-            </p>
-            <div className="flex gap-4 pt-4">
-              <Link to="/shop" className="px-8 py-4 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-full shadow-lg shadow-orange-500/30 transition-all flex items-center gap-2">
-                Shop Now <ArrowRight className="w-5 h-5" />
-              </Link>
-            </div>
-          </motion.div>
-        </div>
+          </div>
+        )}
       </section>
 
       {/* Features Bar */}
@@ -89,36 +136,6 @@ export default function Home() {
             </div>
           </div>
         </div>
-      </section>
-
-      {/* Banners Slider */}
-      <section className="py-12 bg-white overflow-hidden">
-        <div className="flex justify-between items-end mb-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div>
-            <h2 className="text-3xl font-bold text-gray-900 tracking-tight mb-2">Featured Collections</h2>
-            <p className="text-gray-500">Discover our special selections</p>
-          </div>
-        </div>
-        
-        {loading ? (
-          <div className="flex justify-center p-12"><div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div></div>
-        ) : (
-          <div className="relative w-full overflow-hidden flex">
-            {/* We duplicate the banner list twice to create a seamless infinite scroll effect */}
-            <div className="flex gap-6 px-4 w-[200%] animate-auto-scroll">
-              {[...banners, ...banners].map((banner, idx) => (
-                <div 
-                  key={`${banner.id}-${idx}`} 
-                  className="relative h-64 md:h-80 w-80 md:w-96 rounded-3xl overflow-hidden bg-gray-100 flex items-center justify-center flex-shrink-0 shadow-sm group"
-                >
-                  <img src={banner.image} alt={banner.title} className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-gray-900/80 via-gray-900/20 to-transparent"></div>
-                  <h3 className="relative z-20 text-white font-bold text-xl md:text-2xl mt-auto pb-8 px-6 text-center w-full">{banner.title}</h3>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
       </section>
 
       {/* Featured Products */}

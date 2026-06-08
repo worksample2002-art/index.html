@@ -36,9 +36,11 @@ export default function Navbar() {
           </div>
           
           <div className="hidden md:flex items-center space-x-8">
-            <Link to="/" className="text-gray-700 hover:text-emerald-600 font-medium transition-colors">Home</Link>
-            <Link to="/shop" className="text-gray-700 hover:text-emerald-600 font-medium transition-colors">Shop</Link>
-            <Link to="/about" className="text-gray-700 hover:text-emerald-600 font-medium transition-colors">About Us</Link>
+            <Link to="/brands" className="text-gray-700 hover:text-emerald-600 font-medium transition-colors">Brand</Link>
+            <Link to="/shop" className="text-gray-700 hover:text-emerald-600 font-medium transition-colors">Products</Link>
+            <Link to="/track-order" className="text-gray-700 hover:text-emerald-600 font-medium transition-colors">Track Order</Link>
+            <Link to="/blog" className="text-gray-700 hover:text-emerald-600 font-medium transition-colors">News &amp; Events</Link>
+            <Link to="/about" className="text-gray-700 hover:text-emerald-600 font-medium transition-colors">Our Company</Link>
           </div>
 
           <div className="flex items-center space-x-5">
@@ -107,9 +109,11 @@ export default function Navbar() {
       {isMobileMenuOpen && (
         <div className="md:hidden bg-white border-t border-gray-100 p-4 absolute w-full shadow-lg">
           <div className="flex flex-col space-y-4">
-            <Link to="/" className="text-gray-700 font-medium" onClick={() => setMobileMenuOpen(false)}>Home</Link>
-            <Link to="/shop" className="text-gray-700 font-medium" onClick={() => setMobileMenuOpen(false)}>Shop</Link>
-            <Link to="/about" className="text-gray-700 font-medium" onClick={() => setMobileMenuOpen(false)}>About Us</Link>
+            <Link to="/brands" className="text-gray-700 font-medium" onClick={() => setMobileMenuOpen(false)}>Brand</Link>
+            <Link to="/shop" className="text-gray-700 font-medium" onClick={() => setMobileMenuOpen(false)}>Products</Link>
+            <Link to="/track-order" className="text-gray-700 font-medium" onClick={() => setMobileMenuOpen(false)}>Track Order</Link>
+            <Link to="/blog" className="text-gray-700 font-medium" onClick={() => setMobileMenuOpen(false)}>News &amp; Events</Link>
+            <Link to="/about" className="text-gray-700 font-medium" onClick={() => setMobileMenuOpen(false)}>Our Company</Link>
             {!user && (
                <Link to="/login" className="text-emerald-600 font-medium" onClick={() => setMobileMenuOpen(false)}>Login / Register</Link>
             )}

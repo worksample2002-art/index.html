@@ -23,5 +23,14 @@ service cloud.firestore {
       allow read: if true;
       allow write: if true; // Open for dev prototype
     }
+    match /brands/{brandId} {
+      allow read: if true;
+      allow write: if true; // Open for dev prototype
+    }
+
+    match /company/{infoId} {
+      allow read: if true;
+      allow write: if true; // Open for dev prototype
+    }
   }
 }

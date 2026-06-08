@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import React, { useEffect } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
@@ -12,13 +13,14 @@ import Cart from './pages/Cart';
 import Checkout from './pages/Checkout';
 import ProductDetails from './pages/ProductDetails';
 import About from './pages/About';
+import Brands from './pages/Brands';
+import TrackOrder from './pages/TrackOrder';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import StaticPage from './pages/StaticPage';
 import Contact from './pages/Contact';
 import Blog from './pages/Blog';
 import Wishlist from './pages/Wishlist';
-import { useEffect } from 'react';
 import { useAuthStore, useWishlistStore } from './store';
 import { getWishlist } from './lib/api';
 
@@ -43,6 +45,7 @@ export default function App() {
         <main className="flex-grow">
           <Routes>
             <Route path="/" element={<Home />} />
+            <Route path="/brands" element={<Brands />} />
             <Route path="/shop" element={<Shop />} />
             <Route path="/cart" element={<Cart />} />
             <Route path="/checkout" element={<Checkout />} />
@@ -55,6 +58,7 @@ export default function App() {
             <Route path="/terms" element={<StaticPage slug="terms" />} />
             <Route path="/refund" element={<StaticPage slug="refund" />} />
             <Route path="/shipping" element={<StaticPage slug="shipping" />} />
+            <Route path="/track-order" element={<TrackOrder />} />
             <Route path="/login" element={<Login />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/wishlist" element={<Wishlist />} />

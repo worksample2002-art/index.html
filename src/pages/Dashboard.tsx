@@ -3,18 +3,21 @@ import { useAuthStore } from '../store';
 import { useContentStore } from '../store/contentStore';
 import { useNavigate } from 'react-router-dom';
 import { 
-  getProducts, getOrders, getVouchers, getBanners, 
+  getProducts, getOrders, getVouchers, getBanners, getBrands, getCompanyInfo,
   addProduct, deleteProduct, updateProduct,
-  addBanner, updateBanner, deleteBanner 
+  addBrand, updateBrand as updateBrandAPI, deleteBrand as deleteBrandAPI,
+  updateCompanyInfo,
+  addBanner, updateBanner, deleteBanner,
+  updateOrderStatus, addVoucher, updateVoucher, deleteVoucher
 } from '../lib/api';
-import { LogOut, LayoutDashboard, Package, Users, Settings as SettingsIcon, PlusCircle, FileText, Check, ShoppingCart, Tag, Trash2, Edit, Image as ImageIcon } from 'lucide-react';
+import { LogOut, LayoutDashboard, Package, Users, Settings as SettingsIcon, PlusCircle, FileText, Check, ShoppingCart, Tag, Trash2, Edit, Image as ImageIcon, Briefcase, Star } from 'lucide-react';
 
 export default function Dashboard() {
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('overview');
   
-  const { pages, updatePage } = useContentStore();
+  const { pages, updatePage, addPage, deletePage } = useContentStore();
   const [editingPageSlug, setEditingPageSlug] = useState('privacy');
   const [pageContentTemp, setPageContentTemp] = useState(pages['privacy']?.content || '');
 
@@ -23,6 +26,14 @@ export default function Dashboard() {
   const [orders, setOrders] = useState<any[]>([]);
   const [vouchers, setVouchers] = useState<any[]>([]);
   const [banners, setBanners] = useState<any[]>([]);
+  const [brands, setBrands] = useState<any[]>([]);
+  const [companyInfo, setCompanyInfo] = useState<any>(null);
+  const [settings, setSettings] = useState<{key: string, value: string}[]>([]);
+
+  useEffect(() => {
+    const s = localStorage.getItem('adminSettings');
+    if(s) setSettings(JSON.parse(s));
+  }, []);
 
   useEffect(() => {
     if (user?.role === 'admin') {
@@ -30,17 +41,32 @@ export default function Dashboard() {
       getOrders().then(setOrders);
       getVouchers().then(setVouchers);
       getBanners().then(setBanners);
+      getBrands().then(setBrands);
+      getCompanyInfo().then(setCompanyInfo);
     }
   }, [user]);
 
   const handleAddProduct = async () => {
     const name = window.prompt("Enter new product name:");
     if (!name) return;
-    const price = parseInt(window.prompt("Enter price:") || "100");
-    const stock = parseInt(window.prompt("Enter stock:") || "50");
+    const priceStr = window.prompt("Enter price:") || "100";
+    const stockStr = window.prompt("Enter stock:") || "50";
+    const category = window.prompt("Enter category (e.g. Premium Biscuits):") || "Premium Biscuits";
+    const image = window.prompt("Enter image URL:") || "";
+    const description = window.prompt("Enter product description:") || "";
     
     try {
-      const p = await addProduct({ name, price, stock, category: 'New Arrivals', image: '', description: '', rating: 0, reviews: 0, brand: '' });
+      const p = await addProduct({ 
+        name, 
+        price: parseInt(priceStr), 
+        stock: parseInt(stockStr), 
+        category, 
+        image, 
+        description, 
+        rating: 5, 
+        reviews: 0, 
+        brand: 'Bazar' 
+      });
       setProducts([...products, p]);
     } catch(e) { console.error(e); }
   };
@@ -54,8 +80,10 @@ export default function Dashboard() {
   };
 
   const handleUpdateOrderStatus = async (id: string, status: string) => {
-    // Orders update not fully wired, keep mock updating
-    setOrders(orders.map(o => o.id === id ? { ...o, status } : o));
+    try {
+      await updateOrderStatus(id, status);
+      setOrders(orders.map(o => o.id === id ? { ...o, status } : o));
+    } catch(e) { console.error(e) }
   };
 
   const handleEditProduct = async (id: string) => {
@@ -81,23 +109,41 @@ export default function Dashboard() {
     const code = window.prompt("Enter voucher code (e.g. SALE20):");
     if (!code) return;
     const discount = parseInt(window.prompt("Enter discount amount/percent:") || "10");
-    // Mock for now since we didn't add the addVoucher api yet
-    const v = { id: Date.now().toString(), code, discount, type: 'fixed', active: true };
-    setVouchers([...vouchers, v]);
+    try {
+      const v = await addVoucher({ code, discount, type: 'fixed', active: true });
+      setVouchers([...vouchers, v]);
+    } catch(e) { console.error(e) }
+  };
+
+  const handleEditVoucher = async (id: string) => {
+    const v = vouchers.find(v => v.id === id);
+    if (!v) return;
+    const code = window.prompt("Enter new voucher code:", v.code);
+    if (!code) return;
+    const discount = parseInt(window.prompt("Enter discount amount/percent:", v.discount.toString()) || v.discount.toString());
+    try {
+      await updateVoucher(id, { code, discount });
+      setVouchers(vouchers.map(vo => vo.id === id ? { ...vo, code, discount } : vo));
+    } catch(e) { console.error(e) }
   };
 
   const handleDeleteVoucher = async (id: string) => {
     if (!window.confirm("Are you sure?")) return;
-    setVouchers(vouchers.filter(v => v.id !== id));
+    try {
+      await deleteVoucher(id);
+      setVouchers(vouchers.filter(v => v.id !== id));
+    } catch(e) { console.error(e) }
   };
 
   const handleAddBanner = async () => {
     const title = window.prompt("Enter banner title:");
     if (!title) return;
+    const description = window.prompt("Enter banner description (optional):") || "";
+    const link = window.prompt("Enter promotional link/URL (optional):") || "";
     const image = window.prompt("Enter image URL:");
     if (!image) return;
     try {
-      const b = await addBanner({ title, image });
+      const b = await addBanner({ title, description, link, image });
       setBanners([...banners, b]);
     } catch(e) { console.error(e); }
   };
@@ -107,11 +153,15 @@ export default function Dashboard() {
     if (!banner) return;
     const title = window.prompt("Enter new banner title:", banner.title);
     if (title === null) return;
+    const description = window.prompt("Enter banner description:", banner.description || "");
+    if (description === null) return;
+    const link = window.prompt("Enter promotional link/URL:", banner.link || "");
+    if (link === null) return;
     const image = window.prompt("Enter new image URL:", banner.image);
     if (image === null) return;
     try {
-      await updateBanner(id, { title, image });
-      setBanners(banners.map(b => b.id === id ? { ...b, title, image } : b));
+      await updateBanner(id, { title, description, link, image });
+      setBanners(banners.map(b => b.id === id ? { ...b, title, description, link, image } : b));
     } catch(e) { console.error(e); }
   };
 
@@ -129,12 +179,70 @@ export default function Dashboard() {
     }
   }, [editingPageSlug, pages]);
 
+  const handleAddPage = () => {
+    const slug = window.prompt("Enter page slug (e.g., 'about'):");
+    if (!slug) return;
+    const title = window.prompt("Enter page title:");
+    if (!title) return;
+    addPage(slug, title, "");
+    setEditingPageSlug(slug);
+  };
+
+  const handleDeletePage = () => {
+    if (!editingPageSlug) return;
+    if (window.confirm(`Are you sure you want to delete ${pages[editingPageSlug].title}?`)) {
+      deletePage(editingPageSlug);
+      setEditingPageSlug('');
+      setPageContentTemp('');
+    }
+  };
+
   const handleSavePage = (e: React.FormEvent) => {
     e.preventDefault();
     if (editingPageSlug) {
       updatePage(editingPageSlug, pageContentTemp);
       alert('Content saved successfully!');
     }
+  };
+
+  const handleAddBrand = async () => {
+    const name = window.prompt("Enter brand name:");
+    if (!name) return;
+    const image = window.prompt("Enter brand image URL:");
+    if (!image) return;
+    try {
+      const b = await addBrand({ name, image });
+      setBrands([...brands, b]);
+    } catch(e) { console.error(e); }
+  };
+
+  const handleEditBrand = async (id: string) => {
+    const b = brands.find(b => b.id === id);
+    if (!b) return;
+    const name = window.prompt("Enter new brand name:", b.name);
+    if (name === null) return;
+    const image = window.prompt("Enter new brand image URL:", b.image);
+    if (image === null) return;
+    try {
+      await updateBrandAPI(id, { name, image });
+      setBrands(brands.map(br => br.id === id ? { ...br, name, image } : br));
+    } catch(e) { console.error(e); }
+  };
+
+  const handleDeleteBrand = async (id: string) => {
+    if (!window.confirm("Are you sure?")) return;
+    try {
+      await deleteBrandAPI(id);
+      setBrands(brands.filter(br => br.id !== id));
+    } catch(e) { console.error(e); }
+  };
+
+  const handleSaveCompanyInfo = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await updateCompanyInfo(companyInfo);
+      alert('Company info saved successfully!');
+    } catch(e) { console.error(e); }
   };
 
   useEffect(() => {
@@ -180,6 +288,12 @@ export default function Dashboard() {
               </button>
               <button onClick={() => setActiveTab('banners')} className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors shrink-0 ${activeTab === 'banners' ? 'bg-white/10 text-white' : 'hover:bg-white/5 text-emerald-100'}`}>
                 <ImageIcon className="w-5 h-5 shrink-0" /> <span className="hidden md:inline">Banners</span>
+              </button>
+              <button onClick={() => setActiveTab('brands')} className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors shrink-0 ${activeTab === 'brands' ? 'bg-white/10 text-white' : 'hover:bg-white/5 text-emerald-100'}`}>
+                <Star className="w-5 h-5 shrink-0" /> <span className="hidden md:inline">Brands</span>
+              </button>
+              <button onClick={() => setActiveTab('company')} className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors shrink-0 ${activeTab === 'company' ? 'bg-white/10 text-white' : 'hover:bg-white/5 text-emerald-100'}`}>
+                <Briefcase className="w-5 h-5 shrink-0" /> <span className="hidden md:inline">Company Info</span>
               </button>
               <button onClick={() => setActiveTab('pages')} className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors shrink-0 ${activeTab === 'pages' ? 'bg-white/10 text-white' : 'hover:bg-white/5 text-emerald-100'}`}>
                 <FileText className="w-5 h-5 shrink-0" /> <span className="hidden md:inline">Pages</span>
@@ -395,6 +509,7 @@ export default function Dashboard() {
                       <td className="px-6 py-4 text-gray-900 font-medium">{v.discount}</td>
                       <td className="px-6 py-4 text-gray-500 uppercase text-xs font-bold">{v.type}</td>
                       <td className="px-6 py-4 text-right">
+                        <button onClick={() => handleEditVoucher(v.id)} className="text-blue-600 hover:text-blue-800 font-medium mr-3"><Edit className="w-4 h-4 inline-block mb-1"/> Edit</button>
                         <button onClick={() => handleDeleteVoucher(v.id)} className="text-red-600 hover:text-red-800 font-medium"><Trash2 className="w-4 h-4 inline-block mb-1"/> Delete</button>
                       </td>
                     </tr>
@@ -436,6 +551,75 @@ export default function Dashboard() {
                {banners.length === 0 && (
                  <div className="col-span-full py-12 text-center text-gray-500">No banners found.</div>
                )}
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'brands' && (
+          <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+            <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+              <h2 className="text-xl font-bold text-gray-900">Brand Management</h2>
+              <button onClick={handleAddBrand} className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-xl transition-colors text-sm">
+                <PlusCircle className="w-4 h-4" /> Add Brand
+              </button>
+            </div>
+            <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+               {brands.map((brand) => (
+                  <div key={brand.id} className="relative rounded-2xl overflow-hidden shadow-sm group border border-gray-100 bg-gray-50 flex flex-col items-center p-6 pb-4">
+                    <img src={brand.image} alt={brand.name} className="w-24 h-24 object-contain mb-4 rounded-full bg-white shadow-sm" />
+                    <h3 className="font-bold text-gray-900 truncate mb-4">{brand.name}</h3>
+                    <div className="flex gap-2 w-full border-t border-gray-200 pt-4 justify-center">
+                      <button onClick={() => handleEditBrand(brand.id)} className="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center hover:bg-blue-100 hover:text-blue-700 transition-colors shrink-0">
+                        <Edit className="w-4 h-4" />
+                      </button>
+                      <button onClick={() => handleDeleteBrand(brand.id)} className="w-8 h-8 rounded-full bg-red-50 text-red-600 flex items-center justify-center hover:bg-red-100 hover:text-red-700 transition-colors shrink-0">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+               ))}
+               {brands.length === 0 && (
+                 <div className="col-span-full py-12 text-center text-gray-500">No brands found.</div>
+               )}
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'company' && companyInfo && (
+          <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+            <div className="p-6 border-b border-gray-100 bg-gray-50/50">
+              <h2 className="text-xl font-bold text-gray-900">Our Company Info</h2>
+            </div>
+            <div className="p-6 md:p-8">
+              <form className="max-w-2xl space-y-6" onSubmit={handleSaveCompanyInfo}>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Established Date/Year</label>
+                    <input type="text" value={companyInfo.establishedDate} onChange={e => setCompanyInfo({...companyInfo, establishedDate: e.target.value})} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-gray-900" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">MD Name</label>
+                    <input type="text" value={companyInfo.mdName} onChange={e => setCompanyInfo({...companyInfo, mdName: e.target.value})} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-gray-900" />
+                  </div>
+                  <div className="col-span-1 md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">MD Message</label>
+                    <textarea value={companyInfo.mdMessage} onChange={e => setCompanyInfo({...companyInfo, mdMessage: e.target.value})} rows={4} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-gray-900" />
+                  </div>
+                  <div className="col-span-1 md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">MD Image URL</label>
+                    <input type="text" value={companyInfo.mdImage} onChange={e => setCompanyInfo({...companyInfo, mdImage: e.target.value})} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-gray-900" />
+                  </div>
+                  <div className="col-span-1 md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Company History</label>
+                    <textarea value={companyInfo.history} onChange={e => setCompanyInfo({...companyInfo, history: e.target.value})} rows={6} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-gray-900" />
+                  </div>
+                </div>
+                <div className="pt-4">
+                  <button type="submit" className="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition-colors shadow-sm">
+                    Save Details
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         )}
@@ -486,7 +670,7 @@ export default function Dashboard() {
             
             <div className="p-6">
               <div className="mb-6 overflow-x-auto whitespace-nowrap">
-                <div className="flex gap-2 pb-2">
+                <div className="flex gap-2 pb-2 items-center">
                  {Object.keys(pages).map(slug => (
                     <button 
                       key={slug} 
@@ -496,6 +680,9 @@ export default function Dashboard() {
                        {pages[slug].title}
                     </button>
                  ))}
+                 <button onClick={handleAddPage} type="button" className="ml-4 flex items-center justify-center w-8 h-8 rounded-full bg-emerald-100 text-emerald-600 hover:bg-emerald-200 transition-colors">
+                   <PlusCircle className="w-5 h-5" />
+                 </button>
                 </div>
               </div>
 
@@ -504,6 +691,9 @@ export default function Dashboard() {
                   <div>
                     <div className="flex justify-between items-end mb-2">
                       <label className="block text-sm font-medium text-gray-700">Content for '{pages[editingPageSlug].title}'</label>
+                      <button type="button" onClick={handleDeletePage} className="text-red-500 hover:text-red-700 text-sm font-medium flex items-center gap-1">
+                        <Trash2 className="w-4 h-4" /> Delete Page
+                      </button>
                     </div>
                     <textarea 
                       rows={12}
@@ -523,39 +713,48 @@ export default function Dashboard() {
 
         {activeTab === 'settings' && (
           <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
-            <div className="p-6 border-b border-gray-100 bg-gray-50/50">
+            <div className="p-6 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
               <h2 className="text-xl font-bold text-gray-900">Platform Settings</h2>
+              <button onClick={() => {
+                const key = window.prompt("Enter setting key (e.g., 'API_KEY'):");
+                if(!key) return;
+                const value = window.prompt("Enter setting value:");
+                if(!value) return;
+                const updated = [...settings, { key, value }];
+                setSettings(updated);
+                localStorage.setItem('adminSettings', JSON.stringify(updated));
+              }} className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-medium">Add Setting</button>
             </div>
             <div className="p-6 md:p-8">
-              <form className="max-w-2xl space-y-6" onSubmit={(e) => { e.preventDefault(); alert('Settings saved successfully!'); }}>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Store Name</label>
-                    <input type="text" defaultValue="Biscuit Bazar" className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-gray-900" />
+              <div className="space-y-4">
+                {settings.map((s, idx) => (
+                  <div key={idx} className="flex items-center justify-between bg-gray-50 p-4 rounded-xl border border-gray-200 hover:border-emerald-500 transition-colors">
+                    <div>
+                      <p className="text-sm font-bold text-gray-900 mb-1">{s.key}</p>
+                      <p className="text-sm text-gray-500">{s.value}</p>
+                    </div>
+                    <div className="flex gap-2">
+                       <button onClick={() => {
+                         const val = window.prompt("Enter new value:", s.value);
+                         if(val !== null) {
+                           const newSet = [...settings];
+                           newSet[idx].value = val;
+                           setSettings(newSet);
+                           localStorage.setItem('adminSettings', JSON.stringify(newSet));
+                         }
+                       }} className="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex justify-center items-center"><Edit className="w-4 h-4"/></button>
+                       <button onClick={() => {
+                         if(window.confirm("Delete setting?")) {
+                           const newSet = settings.filter((_, i) => i !== idx);
+                           setSettings(newSet);
+                           localStorage.setItem('adminSettings', JSON.stringify(newSet));
+                         }
+                       }} className="w-8 h-8 rounded-full bg-red-50 text-red-600 flex justify-center items-center"><Trash2 className="w-4 h-4"/></button>
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Support Email</label>
-                    <input type="email" defaultValue="hello@biscuitbazar.com" className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-gray-900" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Currency</label>
-                    <select className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-gray-900">
-                      <option>BDT (৳)</option>
-                      <option>USD ($)</option>
-                      <option>EUR (€)</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Tax Rate (%)</label>
-                    <input type="number" defaultValue="5" className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-gray-900" />
-                  </div>
-                </div>
-                <div className="pt-4">
-                  <button type="submit" className="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition-colors shadow-sm">
-                    Save Changes
-                  </button>
-                </div>
-              </form>
+                ))}
+                {settings.length === 0 && <p className="text-center text-gray-500">No custom settings configured.</p>}
+              </div>
             </div>
           </div>
         )}

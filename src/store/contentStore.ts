@@ -18,6 +18,8 @@ interface ContentState {
   pages: Record<string, PageContent>;
   blogs: BlogPost[];
   updatePage: (slug: string, newContent: string) => void;
+  addPage: (slug: string, title: string, content: string) => void;
+  deletePage: (slug: string) => void;
   addBlog: (blog: Omit<BlogPost, 'id' | 'date'>) => void;
   deleteBlog: (id: number) => void;
 }
@@ -44,6 +46,14 @@ export const useContentStore = create<ContentState>((set) => ({
       [slug]: { ...state.pages[slug], content: newContent }
     }
   })),
+  addPage: (slug, title, content) => set((state) => ({
+    pages: { ...state.pages, [slug]: { title, content } }
+  })),
+  deletePage: (slug) => set((state) => {
+    const newPages = { ...state.pages };
+    delete newPages[slug];
+    return { pages: newPages };
+  }),
   addBlog: (blog) => set(state => ({
     blogs: [{ ...blog, id: Date.now(), date: new Date().toISOString().split('T')[0] }, ...state.blogs]
   })),

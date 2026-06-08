@@ -1,5 +1,5 @@
 export interface Product {
-  id: number;
+  id: number | string; // allowing string since firebase IDs become strings
   name: string;
   price: number;
   category: string;
@@ -16,7 +16,21 @@ export interface CartItem extends Product {
 }
 
 export interface User {
-  id: number;
+  id: number | string;
   name: string;
   role: 'customer' | 'admin';
+}
+
+export interface BrandInfo {
+  id: string;
+  name: string;
+  image: string;
+}
+
+export interface CompanyInfo {
+  establishedDate: string;
+  mdName: string;
+  mdMessage: string;
+  mdImage: string;
+  history: string;
 }

@@ -1,6 +1,6 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
-import { ShoppingCart, Star, Heart } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { ShoppingCart, Star, Heart, Zap } from 'lucide-react';
 import { Product } from '../types';
 import { useCartStore, useWishlistStore, useAuthStore } from '../store';
 import { toggleWishlistAPI } from '../lib/api';
@@ -10,6 +10,7 @@ export default function ProductCard({ product }: { product: Product; key?: React
   const addToCart = useCartStore(state => state.addToCart);
   const { wishlist, toggleFavorite } = useWishlistStore();
   const user = useAuthStore(state => state.user);
+  const navigate = useNavigate();
 
   const isWished = wishlist.includes(product.id.toString());
 
@@ -19,6 +20,11 @@ export default function ProductCard({ product }: { product: Product; key?: React
     if (user) {
       await toggleWishlistAPI(user.id.toString(), product.id.toString(), !isWished);
     }
+  };
+
+  const handleOrderNow = () => {
+    addToCart(product);
+    navigate('/checkout');
   };
 
   return (
@@ -65,18 +71,27 @@ export default function ProductCard({ product }: { product: Product; key?: React
         
         <p className="text-xs text-gray-500 mb-4">{product.brand}</p>
 
-        <div className="mt-auto flex items-center justify-between pt-4 border-t border-gray-50">
+        <div className="mt-auto flex items-center justify-between pt-4 border-t border-gray-50 flex-wrap gap-2">
           <div className="flex flex-col">
             <span className="text-xs text-gray-400">Price</span>
             <span className="text-lg font-bold text-gray-900">৳{product.price.toFixed(2)}</span>
           </div>
-          <button 
-            onClick={() => addToCart(product)}
-            className="flex items-center justify-center p-2.5 bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white rounded-full transition-colors"
-            title="Add to Cart"
-          >
-            <ShoppingCart className="w-5 h-5" />
-          </button>
+          <div className="flex gap-2">
+            <button 
+              onClick={handleOrderNow}
+              className="flex items-center justify-center px-4 py-2 bg-emerald-600 font-medium text-white text-sm hover:bg-emerald-700 rounded-lg transition-colors"
+              title="Order Now"
+            >
+              Order Now
+            </button>
+            <button 
+              onClick={() => addToCart(product)}
+              className="flex items-center justify-center p-2.5 bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white rounded-lg transition-colors"
+              title="Add to Cart"
+            >
+              <ShoppingCart className="w-5 h-5" />
+            </button>
+          </div>
         </div>
       </div>
     </motion.div>

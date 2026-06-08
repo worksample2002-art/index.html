@@ -102,6 +102,68 @@ export async function getCategories() {
   return ["Cream Biscuits", "Chocolate Biscuits", "Butter Cookies", "Digestive Biscuits", "Crackers", "Kids Biscuits", "Premium Biscuits", "Sugar-Free Biscuits"];
 }
 
+// Brands
+const initialBrands = [
+  { id: "1", name: "Royal Bakers", image: "https://images.unsplash.com/photo-1549556110-377fbc8d67d7?auto=format&fit=crop&w=500&q=60" },
+  { id: "2", name: "ChocoBites", image: "https://images.unsplash.com/photo-1499636136210-6f4ee915583e?auto=format&fit=crop&w=500&q=60" }
+];
+
+export async function getBrands() {
+  await checkAndSeed();
+  try {
+    const snap = await getDocs(collection(db, "brands"));
+    if (snap.empty) {
+      for (const b of initialBrands) {
+        await setDoc(doc(db, "brands", b.id), b);
+      }
+      return initialBrands;
+    }
+    return snap.docs.map(d => ({ id: d.id, ...(d.data() as any) }));
+  } catch(e) {
+    return initialBrands;
+  }
+}
+
+export async function addBrand(brand: any) {
+  const newId = Date.now().toString();
+  await setDoc(doc(db, "brands", newId), { ...brand, id: newId });
+  return { ...brand, id: newId };
+}
+
+export async function updateBrand(id: string, updates: any) {
+  await updateDoc(doc(db, "brands", id), updates);
+}
+
+export async function deleteBrand(id: string) {
+  await deleteDoc(doc(db, "brands", id));
+}
+
+// Company Info
+const defaultCompanyInfo = {
+  establishedDate: "2010",
+  mdName: "John Doe",
+  mdMessage: "Welcome to Biscuit Bazar, where we bake with love and passion. Our mission is to deliver the crispiest, tastiest biscuits to your doorsteps.",
+  mdImage: "https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=500&q=60",
+  history: "Biscuit Bazar started as a small family bakery in 2010 and has grown into a nationwide brand loved by millions."
+};
+
+export async function getCompanyInfo() {
+  try {
+    const docSnap = await getDocs(collection(db, "company"));
+    if (docSnap.empty) {
+      await setDoc(doc(db, "company", "info"), defaultCompanyInfo);
+      return defaultCompanyInfo;
+    }
+    return docSnap.docs[0].data() as any;
+  } catch(e) {
+    return defaultCompanyInfo;
+  }
+}
+
+export async function updateCompanyInfo(updates: any) {
+  await updateDoc(doc(db, "company", "info"), updates);
+}
+
 // Wishlist
 export async function getWishlist(userId: string): Promise<string[]> {
   try {
@@ -133,13 +195,41 @@ export async function handleLoginMock(email: string) {
   return { token: "user_token_123", user: { id: 2, name: email.split("@")[0], role: "user" } };
 }
 
-// Mock Orders
+// Mock Orders moved to seed mechanism
 const initialOrders = [
   { id: "ORD-100501", date: "2026-06-01", customer: "John Doe", total: 450, status: "Processing" },
   { id: "ORD-100502", date: "2026-06-02", customer: "Jane Smith", total: 120, status: "Delivered" },
 ];
+
 export async function getOrders() {
-  return initialOrders;
+  await checkAndSeed();
+  try {
+    const snap = await getDocs(collection(db, "orders"));
+    if (snap.empty) {
+      for (const o of initialOrders) {
+        await setDoc(doc(db, "orders", o.id), o);
+      }
+      return initialOrders;
+    }
+    return snap.docs.map(d => ({ id: d.id, ...d.data() } as any));
+  } catch(e) {
+    return initialOrders;
+  }
+}
+
+export async function getOrderById(id: string) {
+  try {
+    const snap = await getDocs(collection(db, "orders"));
+    const data = snap.docs.find(d => d.id === id);
+    if (data) return { id, ...data.data() };
+  } catch(e) {}
+  return initialOrders.find(o => o.id === id) || null;
+}
+
+export async function updateOrderStatus(id: string, status: string) {
+  try {
+    await updateDoc(doc(db, "orders", id), { status });
+  } catch(e) { console.error(e) }
 }
 
 // Mock Vouchers  
@@ -147,6 +237,33 @@ const initialVouchers = [
   { id: "1", code: "WELCOME10", discount: 10, type: "percent", active: true },
   { id: "2", code: "FLAT50", discount: 50, type: "fixed", active: true },
 ];
+
 export async function getVouchers() {
-  return initialVouchers;
+  await checkAndSeed();
+  try {
+    const snap = await getDocs(collection(db, "vouchers"));
+    if (snap.empty) {
+      for (const v of initialVouchers) {
+        await setDoc(doc(db, "vouchers", v.id), v);
+      }
+      return initialVouchers;
+    }
+    return snap.docs.map(d => ({ id: d.id, ...d.data() } as any));
+  } catch(e) {
+    return initialVouchers;
+  }
+}
+
+export async function addVoucher(voucher: any) {
+  const newId = Date.now().toString();
+  await setDoc(doc(db, "vouchers", newId), { ...voucher, id: newId });
+  return { ...voucher, id: newId };
+}
+
+export async function updateVoucher(id: string, updates: any) {
+  await updateDoc(doc(db, "vouchers", id), updates);
+}
+
+export async function deleteVoucher(id: string) {
+  await deleteDoc(doc(db, "vouchers", id));
 }

@@ -1,8 +1,17 @@
-import { Link } from 'react-router-dom';
-import { Mail, MapPin, Phone, Award, Users, ShieldCheck } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Mail, MapPin, Phone, Award, Users, ShieldCheck, Quote } from 'lucide-react';
 import { motion } from 'motion/react';
+import { getCompanyInfo } from '../lib/api';
 
 export default function About() {
+  const [info, setInfo] = useState<any>(null);
+
+  useEffect(() => {
+    getCompanyInfo().then(setInfo);
+  }, []);
+
+  if (!info) return <div className="p-20 text-center">Loading...</div>;
+
   return (
     <div className="min-h-screen bg-slate-50 py-16">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -12,20 +21,36 @@ export default function About() {
           <motion.h1 
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-4xl md:text-5xl font-black text-gray-900 mb-6 tracking-tight"
+            className="text-4xl md:text-5xl font-black text-gray-900 mb-6 tracking-tight uppercase"
           >
-            Baking Memories <br />
-            <span className="text-orange-500">Since 2026</span>
+            Our Company <br />
+            <span className="text-orange-500 text-3xl md:text-4xl">Since {info.establishedDate}</span>
           </motion.h1>
           <motion.p 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.2 }}
-            className="text-lg text-gray-600 leading-relaxed"
+            className="text-lg text-gray-600 leading-relaxed font-medium"
           >
-            Welcome to Biscuit Bazar, your premium destination for the finest local and international biscuits. 
-            We believe that every perfect cup of tea deserves the perfect companion.
+            {info.history}
           </motion.p>
+        </div>
+
+        {/* MD Message Section */}
+        <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden mb-20 flex flex-col md:flex-row">
+          <div className="md:w-2/5 shrink-0">
+            <img src={info.mdImage} alt={info.mdName} className="w-full h-full object-cover min-h-[400px]" />
+          </div>
+          <div className="md:w-3/5 p-8 md:p-12 flex flex-col justify-center">
+            <Quote className="w-12 h-12 text-emerald-100 mb-6" />
+            <p className="text-xl md:text-2xl text-gray-800 leading-relaxed mb-8 italic">
+              "{info.mdMessage}"
+            </p>
+            <div>
+              <h3 className="text-xl font-bold text-emerald-900">{info.mdName}</h3>
+              <p className="text-orange-500 font-medium">Managing Director</p>
+            </div>
+          </div>
         </div>
 
         {/* Features Grid */}

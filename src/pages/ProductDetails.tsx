@@ -75,15 +75,24 @@ export default function ProductDetails() {
           
           <p className="text-gray-600 leading-relaxed mb-8 text-lg">{product.description}</p>
           
-          <div className="flex items-center gap-4 mb-8 pb-8 border-b border-gray-100">
+          <div className="flex items-center gap-4 mb-8 pb-8 border-b border-gray-100 flex-wrap">
             <div className="flex items-center border-2 border-gray-200 rounded-full bg-white h-14">
               <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="px-5 h-full text-gray-500 font-bold hover:text-emerald-600">-</button>
               <span className="w-10 text-center font-bold text-lg text-gray-900">{quantity}</span>
               <button onClick={() => setQuantity(quantity + 1)} className="px-5 h-full text-gray-500 font-bold hover:text-emerald-600">+</button>
             </div>
             <button 
+              onClick={() => {
+                for(let i=0; i<quantity; i++) addToCart(product);
+                navigate('/checkout');
+              }}
+              className="px-8 h-14 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-full shadow-lg shadow-emerald-600/20 transition-all flex items-center justify-center gap-2"
+            >
+              Order Now
+            </button>
+            <button 
               onClick={handleAddToCart}
-              className="flex-1 h-14 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-full shadow-lg shadow-emerald-600/20 transition-all flex items-center justify-center gap-2"
+              className="flex-1 min-w-[150px] h-14 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold rounded-full transition-all flex items-center justify-center gap-2"
             >
               <ShoppingCart className="w-5 h-5" /> Add to Cart
             </button>
