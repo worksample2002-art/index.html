@@ -184,12 +184,17 @@ export default function Dashboard() {
       if (customerForm.id) {
         await updateCustomer(customerForm.id, payload);
         setCustomers(customers.map(c => c.id === customerForm.id ? payload : c));
+        alert("Customer updated successfully!");
       } else {
         const c = await addCustomer(payload);
         setCustomers([...customers, c]);
+        alert("Customer added successfully!");
       }
       setIsCustomerModalOpen(false);
-    } catch(e) { console.error("Error saving customer:", e); }
+    } catch(e) {
+      console.error("Error saving customer:", e);
+      alert("Failed to save customer: " + (e instanceof Error ? e.message : String(e)));
+    }
   };
 
   const handleDeleteCustomer = async (id: string) => {
@@ -197,7 +202,11 @@ export default function Dashboard() {
     try {
       await deleteCustomer(id);
       setCustomers(customers.filter(c => c.id !== id));
-    } catch(e) { console.error("Error deleting customer:", e); }
+      alert("Customer deleted successfully!");
+    } catch(e) {
+      console.error("Error deleting customer:", e);
+      alert("Failed to delete customer: " + (e instanceof Error ? e.message : String(e)));
+    }
   };
 
   // Custom Order CRUD handlers
@@ -418,13 +427,18 @@ export default function Dashboard() {
       if (categoryForm.id) {
         await updateCategory(categoryForm.id, categoryForm);
         setCategories(categories.map(c => c.id === categoryForm.id ? categoryForm : c));
+        alert("Category updated successfully!");
       } else {
         const { id, ...data } = categoryForm;
         const c = await addCategory(data);
         setCategories([...categories, c]);
+        alert("Category added successfully!");
       }
       setIsCategoryModalOpen(false);
-    } catch(e) { console.error(e); }
+    } catch(e) {
+      console.error("Error saving category:", e);
+      alert("Failed to save category: " + (e instanceof Error ? e.message : String(e)));
+    }
   };
 
   const handleDeleteCategory = async (id: string) => {
@@ -432,7 +446,11 @@ export default function Dashboard() {
     try {
       await deleteCategory(id);
       setCategories(categories.filter(c => c.id !== id));
-    } catch(e) { console.error(e); }
+      alert("Category deleted successfully!");
+    } catch(e) {
+      console.error("Error deleting category:", e);
+      alert("Failed to delete category: " + (e instanceof Error ? e.message : String(e)));
+    }
   };
 
   const handleResolveChange = async (id: string, action: 'approve' | 'reject', changeData: any) => {
@@ -501,31 +519,45 @@ export default function Dashboard() {
             </button>
           )}
 
+          {(user.role === 'admin' || user.permissions?.includes('vouchers')) && (
+            <button onClick={() => setActiveTab('vouchers')} className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors shrink-0 ${activeTab === 'vouchers' ? 'bg-white/10 text-white' : 'hover:bg-white/5 text-emerald-100'}`}>
+              <Tag className="w-5 h-5 shrink-0" /> <span className="hidden md:inline">Vouchers</span>
+            </button>
+          )}
+          {(user.role === 'admin' || user.permissions?.includes('banners')) && (
+            <button onClick={() => setActiveTab('banners')} className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors shrink-0 ${activeTab === 'banners' ? 'bg-white/10 text-white' : 'hover:bg-white/5 text-emerald-100'}`}>
+              <ImageIcon className="w-5 h-5 shrink-0" /> <span className="hidden md:inline">Banners</span>
+            </button>
+          )}
+          {(user.role === 'admin' || user.permissions?.includes('brands')) && (
+            <button onClick={() => setActiveTab('brands')} className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors shrink-0 ${activeTab === 'brands' ? 'bg-white/10 text-white' : 'hover:bg-white/5 text-emerald-100'}`}>
+              <Star className="w-5 h-5 shrink-0" /> <span className="hidden md:inline">Brands</span>
+            </button>
+          )}
+          {(user.role === 'admin' || user.permissions?.includes('company')) && (
+            <button onClick={() => setActiveTab('company')} className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors shrink-0 ${activeTab === 'company' ? 'bg-white/10 text-white' : 'hover:bg-white/5 text-emerald-100'}`}>
+              <Briefcase className="w-5 h-5 shrink-0" /> <span className="hidden md:inline">Company Info</span>
+            </button>
+          )}
+          {(user.role === 'admin' || user.permissions?.includes('pages')) && (
+            <button onClick={() => setActiveTab('pages')} className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors shrink-0 ${activeTab === 'pages' ? 'bg-white/10 text-white' : 'hover:bg-white/5 text-emerald-100'}`}>
+              <FileText className="w-5 h-5 shrink-0" /> <span className="hidden md:inline">Pages</span>
+            </button>
+          )}
+          {(user.role === 'admin' || user.permissions?.includes('settings')) && (
+            <button onClick={() => setActiveTab('settings')} className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors shrink-0 ${activeTab === 'settings' ? 'bg-white/10 text-white' : 'hover:bg-white/5 text-emerald-100'}`}>
+              <SettingsIcon className="w-5 h-5 shrink-0" /> <span className="hidden md:inline">Settings</span>
+            </button>
+          )}
+          
+          <div className="w-full h-px bg-emerald-800 my-2 hidden md:block"></div>
+          {(user.role === 'admin' || user.permissions?.includes('categories')) && (
+            <button onClick={() => setActiveTab('categories')} className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors shrink-0 ${activeTab === 'categories' ? 'bg-white/10 text-white' : 'hover:bg-white/5 text-emerald-100'}`}>
+              <Layers className="w-5 h-5 shrink-0" /> <span className="hidden md:inline">Categories</span>
+            </button>
+          )}
           {user.role === 'admin' && (
             <>
-              <button onClick={() => setActiveTab('vouchers')} className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors shrink-0 ${activeTab === 'vouchers' ? 'bg-white/10 text-white' : 'hover:bg-white/5 text-emerald-100'}`}>
-                <Tag className="w-5 h-5 shrink-0" /> <span className="hidden md:inline">Vouchers</span>
-              </button>
-              <button onClick={() => setActiveTab('banners')} className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors shrink-0 ${activeTab === 'banners' ? 'bg-white/10 text-white' : 'hover:bg-white/5 text-emerald-100'}`}>
-                <ImageIcon className="w-5 h-5 shrink-0" /> <span className="hidden md:inline">Banners</span>
-              </button>
-              <button onClick={() => setActiveTab('brands')} className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors shrink-0 ${activeTab === 'brands' ? 'bg-white/10 text-white' : 'hover:bg-white/5 text-emerald-100'}`}>
-                <Star className="w-5 h-5 shrink-0" /> <span className="hidden md:inline">Brands</span>
-              </button>
-              <button onClick={() => setActiveTab('company')} className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors shrink-0 ${activeTab === 'company' ? 'bg-white/10 text-white' : 'hover:bg-white/5 text-emerald-100'}`}>
-                <Briefcase className="w-5 h-5 shrink-0" /> <span className="hidden md:inline">Company Info</span>
-              </button>
-              <button onClick={() => setActiveTab('pages')} className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors shrink-0 ${activeTab === 'pages' ? 'bg-white/10 text-white' : 'hover:bg-white/5 text-emerald-100'}`}>
-                <FileText className="w-5 h-5 shrink-0" /> <span className="hidden md:inline">Pages</span>
-              </button>
-              <button onClick={() => setActiveTab('settings')} className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors shrink-0 ${activeTab === 'settings' ? 'bg-white/10 text-white' : 'hover:bg-white/5 text-emerald-100'}`}>
-                <SettingsIcon className="w-5 h-5 shrink-0" /> <span className="hidden md:inline">Settings</span>
-              </button>
-              
-              <div className="w-full h-px bg-emerald-800 my-2 hidden md:block"></div>
-              <button onClick={() => setActiveTab('categories')} className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors shrink-0 ${activeTab === 'categories' ? 'bg-white/10 text-white' : 'hover:bg-white/5 text-emerald-100'}`}>
-                <Layers className="w-5 h-5 shrink-0" /> <span className="hidden md:inline">Categories</span>
-              </button>
               <button onClick={() => setActiveTab('approvals')} className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors shrink-0 ${activeTab === 'approvals' ? 'bg-white/10 text-white' : 'hover:bg-white/5 text-emerald-100'}`}>
                 <Clock className="w-5 h-5 shrink-0" /> <span className="hidden md:inline">Approvals <span className="ml-2 bg-emerald-500 text-white text-xs px-2 py-0.5 rounded-full">{pendingChanges.length}</span></span>
               </button>
@@ -1106,7 +1138,7 @@ export default function Dashboard() {
           </div>
         )}
         
-        {activeTab === 'categories' && user.role === 'admin' && (
+        {activeTab === 'categories' && (user.role === 'admin' || user.permissions?.includes('categories')) && (
           <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
             <div className="p-6 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
               <h2 className="text-xl font-bold text-gray-900">Manage Categories</h2>
@@ -1239,7 +1271,7 @@ export default function Dashboard() {
               <form onSubmit={handleSaveCategory} className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Category Name</label>
-                  <input required type="text" value={categoryForm.name} onChange={e => setCategoryForm({...categoryForm, name: e.target.value})} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2 focus:ring-2 focus:ring-emerald-500 outline-none" />
+                  <input required type="text" value={categoryForm.name} onChange={e => setCategoryForm({...categoryForm, name: e.target.value})} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2 text-gray-900 focus:ring-2 focus:ring-emerald-500 outline-none" />
                 </div>
                 <div className="flex justify-end gap-3 mt-6">
                   <button type="button" onClick={() => setIsCategoryModalOpen(false)} className="px-5 py-2.5 rounded-xl font-medium text-gray-700 bg-gray-100 hover:bg-gray-200">Cancel</button>
