@@ -89,6 +89,10 @@ export async function addProduct(product: Omit<Product, 'id'>) {
   return { ...product, id: newId, rating: 5.0, reviews: 0 };
 }
 
+export async function updateProduct(id: string, updates: Partial<Product>) {
+  await updateDoc(doc(db, "products", id), updates);
+}
+
 export async function deleteProduct(id: string) {
   await deleteDoc(doc(db, "products", id));
 }

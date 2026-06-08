@@ -3,7 +3,7 @@ import { useContentStore } from '../store/contentStore';
 import { useNavigate } from 'react-router-dom';
 import { 
   getProducts, getOrders, getVouchers, getBanners, 
-  addProduct, deleteProduct, 
+  addProduct, deleteProduct, updateProduct,
   addBanner, updateBanner, deleteBanner 
 } from '../lib/api';
 import { LogOut, LayoutDashboard, Package, Users, Settings as SettingsIcon, PlusCircle, FileText, Check, ShoppingCart, Tag, Trash2, Edit, Image as ImageIcon } from 'lucide-react';
@@ -56,6 +56,25 @@ export default function Dashboard() {
   const handleUpdateOrderStatus = async (id: string, status: string) => {
     // Orders update not fully wired, keep mock updating
     setOrders(orders.map(o => o.id === id ? { ...o, status } : o));
+  };
+
+  const handleEditProduct = async (id: string) => {
+    const product = products.find(p => p.id === id);
+    if (!product) return;
+    const name = window.prompt("Enter new product name:", product.name);
+    if (!name) return;
+    const priceStr = window.prompt("Enter price:", product.price.toString());
+    const stockStr = window.prompt("Enter stock:", product.stock?.toString() || "0");
+    if (!priceStr || !stockStr) return;
+    
+    try {
+      const price = parseInt(priceStr);
+      const stock = parseInt(stockStr);
+      await updateProduct(id, { name, price, stock });
+      setProducts(products.map(p => p.id === id ? { ...p, name, price, stock } : p));
+    } catch (e) {
+      console.error("Error updating product:", e);
+    }
   };
 
   const handleAddVoucher = async () => {
@@ -286,7 +305,7 @@ export default function Dashboard() {
                         </span>
                       </td>
                       <td className="px-6 py-4 text-right">
-                        <button onClick={() => window.alert('Edit feature initialized for id ' + product.id)} className="text-blue-600 hover:text-blue-800 font-medium mr-3"><Edit className="w-4 h-4 inline-block mb-1"/> Edit</button>
+                        <button onClick={() => handleEditProduct(product.id)} className="text-blue-600 hover:text-blue-800 font-medium mr-3"><Edit className="w-4 h-4 inline-block mb-1"/> Edit</button>
                         <button onClick={() => handleDeleteProduct(product.id)} className="text-red-600 hover:text-red-800 font-medium"><Trash2 className="w-4 h-4 inline-block mb-1"/> Delete</button>
                       </td>
                     </tr>
