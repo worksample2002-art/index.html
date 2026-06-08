@@ -489,7 +489,7 @@ export default function Dashboard() {
             </button>
           )}
 
-          {user.role === 'admin' && (
+          {(user.role === 'admin' || user.permissions?.includes('customers')) && (
              <button onClick={() => setActiveTab('customers')} className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors shrink-0 ${activeTab === 'customers' ? 'bg-white/10 text-white' : 'hover:bg-white/5 text-emerald-100'}`}>
                <Users className="w-5 h-5 shrink-0" /> <span className="hidden md:inline">Customers</span>
              </button>
@@ -668,7 +668,7 @@ export default function Dashboard() {
           <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
             <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
               <h2 className="text-xl font-bold text-gray-900">Sales Orders</h2>
-              {user.role === 'admin' && (
+              {(user.role === 'admin' || user.permissions?.includes('orders')) && (
                 <button onClick={handleAddOrder} className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-xl transition-colors text-sm">
                   <PlusCircle className="w-4 h-4" /> Add Order
                 </button>
@@ -708,7 +708,7 @@ export default function Dashboard() {
                           <option>Shipped</option>
                           <option>Delivered</option>
                         </select>
-                        {user.role === 'admin' && (
+                        {(user.role === 'admin' || user.permissions?.includes('orders')) && (
                           <>
                             <button onClick={() => handleEditOrder(order.id)} className="text-emerald-600 hover:text-emerald-800 font-medium p-1 transition-colors"><Edit className="w-4 h-4 inline-block"/></button>
                             <button onClick={() => handleDeleteOrder(order.id)} className="text-red-600 hover:text-red-800 font-medium p-1 transition-colors"><Trash2 className="w-4 h-4 inline-block"/></button>
@@ -875,7 +875,7 @@ export default function Dashboard() {
           <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
              <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
               <h2 className="text-xl font-bold text-gray-900">Customer Management</h2>
-              {user.role === 'admin' && (
+              {(user.role === 'admin' || user.permissions?.includes('customers')) && (
                 <button onClick={handleAddCustomer} className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-xl transition-colors text-sm">
                   <PlusCircle className="w-4 h-4" /> Add Customer
                 </button>
@@ -889,7 +889,7 @@ export default function Dashboard() {
                     <th className="px-6 py-4">Email</th>
                     <th className="px-6 py-4">Total Orders</th>
                     <th className="px-6 py-4">Status</th>
-                    {user.role === 'admin' && <th className="px-6 py-4 text-right">Actions</th>}
+                    {(user.role === 'admin' || user.permissions?.includes('customers')) && <th className="px-6 py-4 text-right">Actions</th>}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
@@ -903,7 +903,7 @@ export default function Dashboard() {
                           {customer.status}
                         </span>
                       </td>
-                      {user.role === 'admin' && (
+                      {(user.role === 'admin' || user.permissions?.includes('customers')) && (
                         <td className="px-6 py-4 text-right flex items-center justify-end gap-2">
                           <button onClick={() => handleEditCustomer(customer.id)} className="text-emerald-600 hover:text-emerald-800 font-medium p-1 transition-colors"><Edit className="w-4 h-4 inline-block"/></button>
                           <button onClick={() => handleDeleteCustomer(customer.id)} className="text-red-600 hover:text-red-800 font-medium p-1 transition-colors"><Trash2 className="w-4 h-4 inline-block"/></button>
