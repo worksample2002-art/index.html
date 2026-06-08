@@ -40,5 +40,13 @@ service cloud.firestore {
     match /pending_changes/{changeId} {
       allow read, write: if true; // Open for dev prototype
     }
+
+    match /categories/{categoryId} {
+      allow read, write: if true; // Open for dev prototype
+    }
+
+    match /customers/{customerId} {
+      allow read, write: if true; // Open for dev prototype
+    }
   }
 }

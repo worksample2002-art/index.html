@@ -331,6 +331,59 @@ export async function updateOrderStatus(id: string, status: string) {
   } catch(e) { console.error(e) }
 }
 
+export async function addOrder(order: any) {
+  const newId = order.id || "ORD-" + Math.floor(100000 + Math.random() * 900000);
+  const data = { ...order, id: newId, date: order.date || new Date().toISOString().split('T')[0] };
+  await setDoc(doc(db, "orders", newId), data);
+  return data;
+}
+
+export async function updateOrder(id: string, updates: any) {
+  await updateDoc(doc(db, "orders", id), updates);
+}
+
+export async function deleteOrder(id: string) {
+  await deleteDoc(doc(db, "orders", id));
+}
+
+// Customers API
+const initialCustomers = [
+  { id: "1", name: "John Doe", email: "john@example.com", orders: 12, status: "Active" },
+  { id: "2", name: "Jane Smith", email: "jane@example.com", orders: 5, status: "Active" },
+  { id: "3", name: "Robert Fox", email: "robert@example.com", orders: 0, status: "Inactive" }
+];
+
+export async function getCustomers() {
+  await checkAndSeed();
+  try {
+    const snap = await getDocs(collection(db, "customers"));
+    if (snap.empty) {
+      for (const c of initialCustomers) {
+        await setDoc(doc(db, "customers", c.id), c);
+      }
+      return initialCustomers;
+    }
+    return snap.docs.map(d => ({ id: d.id, ...d.data() } as any));
+  } catch(e) {
+    return initialCustomers;
+  }
+}
+
+export async function addCustomer(customer: any) {
+  const newId = Date.now().toString();
+  const data = { ...customer, id: newId, orders: customer.orders || 0, status: customer.status || "Active" };
+  await setDoc(doc(db, "customers", newId), data);
+  return data;
+}
+
+export async function updateCustomer(id: string, updates: any) {
+  await updateDoc(doc(db, "customers", id), updates);
+}
+
+export async function deleteCustomer(id: string) {
+  await deleteDoc(doc(db, "customers", id));
+}
+
 // Mock Vouchers  
 const initialVouchers = [
   { id: "1", code: "WELCOME10", discount: 10, type: "percent", active: true },

@@ -38,6 +38,17 @@
         "active": { "type": "boolean" }
       }
     },
+    "Customer": {
+      "title": "Customer",
+      "description": "Registered customer",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "orders": { "type": "number" },
+        "status": { "type": "string" }
+      }
+    },
     "Banner": {
       "title": "Banner",
       "description": "Homepage banner image",
@@ -64,6 +75,14 @@
     "/banners/{bannerId}": {
       "schema": { "$ref": "#/entities/Banner" },
       "description": "List of banners"
+    },
+    "/categories/{categoryId}": {
+      "schema": { "type": "object", "properties": { "name": { "type": "string" } } },
+      "description": "List of product categories"
+    },
+    "/customers/{customerId}": {
+      "schema": { "$ref": "#/entities/Customer" },
+      "description": "List of customers"
     }
   }
 }

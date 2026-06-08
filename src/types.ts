@@ -18,7 +18,8 @@ export interface CartItem extends Product {
 export interface User {
   id: number | string;
   name: string;
-  role: 'customer' | 'admin';
+  role: 'customer' | 'admin' | 'subadmin';
+  permissions?: string;
 }
 
 export interface BrandInfo {

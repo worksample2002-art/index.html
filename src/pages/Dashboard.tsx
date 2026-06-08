@@ -4,7 +4,7 @@ import { useContentStore } from '../store/contentStore';
 import { useNavigate } from 'react-router-dom';
 import { 
   getProducts, addProduct, updateProduct, deleteProduct,
-  getOrders, 
+  getOrders, addOrder, updateOrder, deleteOrder,
   getVouchers,
   getBanners,
   getBrands,
@@ -15,7 +15,8 @@ import {
   addBanner, updateBanner, deleteBanner,
   updateOrderStatus, addVoucher, updateVoucher, deleteVoucher,
   submitPendingChange, getPendingChanges, resolvePendingChange,
-  getSubAdmins, addSubAdmin, deleteSubAdmin
+  getSubAdmins, addSubAdmin, deleteSubAdmin,
+  getCustomers, addCustomer, updateCustomer, deleteCustomer
 } from '../lib/api';
 import ImageUploader from '../components/ImageUploader';
 import { LogOut, LayoutDashboard, Package, Users, Settings as SettingsIcon, PlusCircle, FileText, Check, ShoppingCart, Tag, Trash2, Edit, Image as ImageIcon, Briefcase, Star, X, Shield, Clock, Layers } from 'lucide-react';
@@ -41,6 +42,17 @@ export default function Dashboard() {
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [categoryForm, setCategoryForm] = useState<any>({
     id: '', name: ''
+  });
+
+  const [customers, setCustomers] = useState<any[]>([]);
+  const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
+  const [customerForm, setCustomerForm] = useState<any>({
+    id: '', name: '', email: '', orders: 0, status: 'Active'
+  });
+
+  const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
+  const [orderForm, setOrderForm] = useState<any>({
+    id: '', date: '', customer: '', total: 0, status: 'Processing'
   });
 
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
@@ -75,6 +87,7 @@ export default function Dashboard() {
       getBrands().then(setBrands);
       getCompanyInfo().then(setCompanyInfo);
       getCategories().then(setCategories);
+      getCustomers().then(setCustomers);
     }
     if (user?.role === 'admin') {
       getSubAdmins().then(setSubadmins);
@@ -148,6 +161,80 @@ export default function Dashboard() {
         setOrders(orders.map(o => o.id === id ? { ...o, status } : o));
       }
     } catch(e) { console.error(e) }
+  };
+
+  // Custom Customer CRUD handlers
+  const handleAddCustomer = () => {
+    setCustomerForm({ id: '', name: '', email: '', orders: 0, status: 'Active' });
+    setIsCustomerModalOpen(true);
+  };
+
+  const handleEditCustomer = (id: string) => {
+    const cust = customers.find(c => c.id === id);
+    if (!cust) return;
+    setCustomerForm({ ...cust, orders: cust.orders?.toString() || '0' });
+    setIsCustomerModalOpen(true);
+  };
+
+  const handleSaveCustomer = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const ordersCount = parseInt(customerForm.orders) || 0;
+      const payload = { ...customerForm, orders: ordersCount };
+      if (customerForm.id) {
+        await updateCustomer(customerForm.id, payload);
+        setCustomers(customers.map(c => c.id === customerForm.id ? payload : c));
+      } else {
+        const c = await addCustomer(payload);
+        setCustomers([...customers, c]);
+      }
+      setIsCustomerModalOpen(false);
+    } catch(e) { console.error("Error saving customer:", e); }
+  };
+
+  const handleDeleteCustomer = async (id: string) => {
+    if (!window.confirm("Are you sure you want to delete this customer?")) return;
+    try {
+      await deleteCustomer(id);
+      setCustomers(customers.filter(c => c.id !== id));
+    } catch(e) { console.error("Error deleting customer:", e); }
+  };
+
+  // Custom Order CRUD handlers
+  const handleAddOrder = () => {
+    setOrderForm({ id: '', date: new Date().toISOString().split('T')[0], customer: '', total: '150', status: 'Processing' });
+    setIsOrderModalOpen(true);
+  };
+
+  const handleEditOrder = (id: string) => {
+    const ord = orders.find(o => o.id === id);
+    if (!ord) return;
+    setOrderForm({ ...ord, total: ord.total?.toString() || '0' });
+    setIsOrderModalOpen(true);
+  };
+
+  const handleSaveOrder = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const totalAmount = parseFloat(orderForm.total) || 0;
+      const payload = { ...orderForm, total: totalAmount };
+      if (orderForm.id) {
+        await updateOrder(orderForm.id, payload);
+        setOrders(orders.map(o => o.id === orderForm.id ? payload : o));
+      } else {
+        const o = await addOrder(payload);
+        setOrders([...orders, o]);
+      }
+      setIsOrderModalOpen(false);
+    } catch(e) { console.error("Error saving order:", e); }
+  };
+
+  const handleDeleteOrder = async (id: string) => {
+    if (!window.confirm("Are you sure you want to delete this order?")) return;
+    try {
+      await deleteOrder(id);
+      setOrders(orders.filter(o => o.id !== id));
+    } catch(e) { console.error("Error deleting order:", e); }
   };
 
   const handleAddVoucher = async () => {
@@ -581,6 +668,11 @@ export default function Dashboard() {
           <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
             <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
               <h2 className="text-xl font-bold text-gray-900">Sales Orders</h2>
+              {user.role === 'admin' && (
+                <button onClick={handleAddOrder} className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-xl transition-colors text-sm">
+                  <PlusCircle className="w-4 h-4" /> Add Order
+                </button>
+              )}
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm whitespace-nowrap">
@@ -606,9 +698,9 @@ export default function Dashboard() {
                           {order.status}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-right">
+                      <td className="px-6 py-4 text-right flex items-center justify-end gap-2">
                         <select 
-                          className="bg-gray-50 border border-gray-200 text-sm rounded-lg px-2 py-1 outline-none mr-2"
+                          className="bg-gray-50 border border-gray-200 text-sm rounded-lg px-2 py-1 outline-none font-medium text-gray-700"
                           value={order.status}
                           onChange={(e) => handleUpdateOrderStatus(order.id, e.target.value)}
                         >
@@ -616,6 +708,12 @@ export default function Dashboard() {
                           <option>Shipped</option>
                           <option>Delivered</option>
                         </select>
+                        {user.role === 'admin' && (
+                          <>
+                            <button onClick={() => handleEditOrder(order.id)} className="text-emerald-600 hover:text-emerald-800 font-medium p-1 transition-colors"><Edit className="w-4 h-4 inline-block"/></button>
+                            <button onClick={() => handleDeleteOrder(order.id)} className="text-red-600 hover:text-red-800 font-medium p-1 transition-colors"><Trash2 className="w-4 h-4 inline-block"/></button>
+                          </>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -777,6 +875,11 @@ export default function Dashboard() {
           <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
              <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
               <h2 className="text-xl font-bold text-gray-900">Customer Management</h2>
+              {user.role === 'admin' && (
+                <button onClick={handleAddCustomer} className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-xl transition-colors text-sm">
+                  <PlusCircle className="w-4 h-4" /> Add Customer
+                </button>
+              )}
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm whitespace-nowrap">
@@ -786,14 +889,11 @@ export default function Dashboard() {
                     <th className="px-6 py-4">Email</th>
                     <th className="px-6 py-4">Total Orders</th>
                     <th className="px-6 py-4">Status</th>
+                    {user.role === 'admin' && <th className="px-6 py-4 text-right">Actions</th>}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {[
-                    { id: 1, name: 'John Doe', email: 'john@example.com', orders: 12, status: 'Active' },
-                    { id: 2, name: 'Jane Smith', email: 'jane@example.com', orders: 5, status: 'Active' },
-                    { id: 3, name: 'Robert Fox', email: 'robert@example.com', orders: 0, status: 'Inactive' }
-                  ].map(customer => (
+                  {customers.map(customer => (
                     <tr key={customer.id} className="hover:bg-gray-50/50 transition-colors">
                       <td className="px-6 py-4 font-medium text-gray-900">{customer.name}</td>
                       <td className="px-6 py-4 text-gray-500">{customer.email}</td>
@@ -803,8 +903,17 @@ export default function Dashboard() {
                           {customer.status}
                         </span>
                       </td>
+                      {user.role === 'admin' && (
+                        <td className="px-6 py-4 text-right flex items-center justify-end gap-2">
+                          <button onClick={() => handleEditCustomer(customer.id)} className="text-emerald-600 hover:text-emerald-800 font-medium p-1 transition-colors"><Edit className="w-4 h-4 inline-block"/></button>
+                          <button onClick={() => handleDeleteCustomer(customer.id)} className="text-red-600 hover:text-red-800 font-medium p-1 transition-colors"><Trash2 className="w-4 h-4 inline-block"/></button>
+                        </td>
+                      )}
                     </tr>
                   ))}
+                  {customers.length === 0 && (
+                     <tr><td colSpan={5} className="px-6 py-8 text-center text-gray-500">No customers found.</td></tr>
+                  )}
                 </tbody>
               </table>
             </div>
@@ -1034,6 +1143,87 @@ export default function Dashboard() {
                   )}
                 </tbody>
               </table>
+            </div>
+          </div>
+        )}
+        
+        {/* Customer Modal */}
+        {isCustomerModalOpen && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-3xl p-6 md:p-8 w-full max-w-sm">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-bold text-gray-900">{customerForm.id ? 'Edit Customer' : 'Add New Customer'}</h3>
+                <button onClick={() => setIsCustomerModalOpen(false)} className="text-gray-500 hover:text-gray-700"><X className="w-6 h-6" /></button>
+              </div>
+              <form onSubmit={handleSaveCustomer} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Customer Name</label>
+                  <input required type="text" value={customerForm.name} onChange={e => setCustomerForm({...customerForm, name: e.target.value})} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2 text-gray-900 focus:ring-2 focus:ring-emerald-500 outline-none" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+                  <input required type="email" value={customerForm.email} onChange={e => setCustomerForm({...customerForm, email: e.target.value})} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2 text-gray-900 focus:ring-2 focus:ring-emerald-500 outline-none" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Total Orders</label>
+                  <input required type="number" min="0" value={customerForm.orders} onChange={e => setCustomerForm({...customerForm, orders: e.target.value})} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2 text-gray-900 focus:ring-2 focus:ring-emerald-500 outline-none" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                  <select value={customerForm.status} onChange={e => setCustomerForm({...customerForm, status: e.target.value})} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2 text-gray-900 focus:ring-2 focus:ring-emerald-500 outline-none">
+                    <option value="Active">Active</option>
+                    <option value="Inactive">Inactive</option>
+                  </select>
+                </div>
+                <div className="flex justify-end gap-3 mt-6">
+                  <button type="button" onClick={() => setIsCustomerModalOpen(false)} className="px-5 py-2.5 rounded-xl font-medium text-gray-700 bg-gray-100 hover:bg-gray-200">Cancel</button>
+                  <button type="submit" className="px-5 py-2.5 rounded-xl font-medium text-white bg-emerald-600 hover:bg-emerald-700">Save</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Order Modal */}
+        {isOrderModalOpen && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-3xl p-6 md:p-8 w-full max-w-sm">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-bold text-gray-900">{orderForm.id ? 'Edit Order' : 'Add New Order'}</h3>
+                <button onClick={() => setIsOrderModalOpen(false)} className="text-gray-500 hover:text-gray-700"><X className="w-6 h-6" /></button>
+              </div>
+              <form onSubmit={handleSaveOrder} className="space-y-4">
+                {orderForm.id && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-500 mb-1 font-mono text-xs">Order ID (readonly)</label>
+                    <input disabled type="text" value={orderForm.id} className="w-full bg-gray-100 border border-gray-200 rounded-lg px-4 py-2 text-gray-500 font-mono text-sm outline-none" />
+                  </div>
+                )}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Order Date</label>
+                  <input required type="date" value={orderForm.date} onChange={e => setOrderForm({...orderForm, date: e.target.value})} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2 text-gray-900 focus:ring-2 focus:ring-emerald-500 outline-none" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Customer Name</label>
+                  <input required type="text" value={orderForm.customer} onChange={e => setOrderForm({...orderForm, customer: e.target.value})} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2 text-gray-900 focus:ring-2 focus:ring-emerald-500 outline-none" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Total (৳)</label>
+                  <input required type="number" step="0.01" value={orderForm.total} onChange={e => setOrderForm({...orderForm, total: e.target.value})} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2 text-gray-900 focus:ring-2 focus:ring-emerald-500 outline-none" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                  <select value={orderForm.status} onChange={e => setOrderForm({...orderForm, status: e.target.value})} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2 text-gray-900 focus:ring-2 focus:ring-emerald-500 outline-none">
+                    <option value="Processing">Processing</option>
+                    <option value="Shipped">Shipped</option>
+                    <option value="Delivered">Delivered</option>
+                  </select>
+                </div>
+                <div className="flex justify-end gap-3 mt-6">
+                  <button type="button" onClick={() => setIsOrderModalOpen(false)} className="px-5 py-2.5 rounded-xl font-medium text-gray-700 bg-gray-100 hover:bg-gray-200">Cancel</button>
+                  <button type="submit" className="px-5 py-2.5 rounded-xl font-medium text-white bg-emerald-600 hover:bg-emerald-700">Save</button>
+                </div>
+              </form>
             </div>
           </div>
         )}
