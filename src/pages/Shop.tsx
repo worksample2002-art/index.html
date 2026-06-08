@@ -10,7 +10,7 @@ export default function Shop() {
   const categoryQuery = searchParams.get('category');
   
   const [products, setProducts] = useState<Product[]>([]);
-  const [categories, setCategories] = useState<string[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -45,13 +45,13 @@ export default function Shop() {
                   All Biscuits
                 </button>
               </li>
-              {categories.map(cat => (
-                <li key={cat}>
+              {categories.map((cat: any) => (
+                <li key={cat.id || cat.name}>
                   <button 
-                    onClick={() => setSearchParams({ category: cat })}
-                    className={`text-sm tracking-wide ${categoryQuery === cat ? 'text-emerald-600 font-bold' : 'text-gray-600 hover:text-emerald-600'}`}
+                    onClick={() => setSearchParams({ category: cat.name })}
+                    className={`text-sm tracking-wide ${categoryQuery === cat.name ? 'text-emerald-600 font-bold' : 'text-gray-600 hover:text-emerald-600'}`}
                   >
-                    {cat}
+                    {cat.name}
                   </button>
                 </li>
               ))}

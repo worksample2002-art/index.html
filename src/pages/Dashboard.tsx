@@ -3,8 +3,13 @@ import { useAuthStore } from '../store';
 import { useContentStore } from '../store/contentStore';
 import { useNavigate } from 'react-router-dom';
 import { 
-  getProducts, getOrders, getVouchers, getBanners, getBrands, getCompanyInfo, getCategories,
-  addProduct, deleteProduct, updateProduct,
+  getProducts, addProduct, updateProduct, deleteProduct,
+  getOrders, 
+  getVouchers,
+  getBanners,
+  getBrands,
+  getCompanyInfo,
+  getCategories, addCategory, updateCategory, deleteCategory,
   addBrand, updateBrand as updateBrandAPI, deleteBrand as deleteBrandAPI,
   updateCompanyInfo,
   addBanner, updateBanner, deleteBanner,
@@ -13,7 +18,7 @@ import {
   getSubAdmins, addSubAdmin, deleteSubAdmin
 } from '../lib/api';
 import ImageUploader from '../components/ImageUploader';
-import { LogOut, LayoutDashboard, Package, Users, Settings as SettingsIcon, PlusCircle, FileText, Check, ShoppingCart, Tag, Trash2, Edit, Image as ImageIcon, Briefcase, Star, X, Shield, Clock } from 'lucide-react';
+import { LogOut, LayoutDashboard, Package, Users, Settings as SettingsIcon, PlusCircle, FileText, Check, ShoppingCart, Tag, Trash2, Edit, Image as ImageIcon, Briefcase, Star, X, Shield, Clock, Layers } from 'lucide-react';
 
 export default function Dashboard() {
   const { user, logout } = useAuthStore();
@@ -32,7 +37,12 @@ export default function Dashboard() {
   const [brands, setBrands] = useState<any[]>([]);
   const [companyInfo, setCompanyInfo] = useState<any>(null);
 
-  const [categories, setCategories] = useState<string[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
+  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+  const [categoryForm, setCategoryForm] = useState<any>({
+    id: '', name: ''
+  });
+
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [productForm, setProductForm] = useState<any>({
     id: '', name: '', price: '100', stock: '50', category: '', image: '', description: '', brand: 'Bazar'
@@ -73,7 +83,7 @@ export default function Dashboard() {
   }, [user]);
 
   const handleAddProduct = () => {
-    setProductForm({ id: '', name: '', price: '100', stock: '50', category: categories[0] || 'Premium Biscuits', image: '', description: '', brand: 'Bazar' });
+    setProductForm({ id: '', name: '', price: '100', stock: '50', category: categories[0]?.name || 'Premium Biscuits', image: '', description: '', brand: 'Bazar' });
     setIsProductModalOpen(true);
   };
 
@@ -303,6 +313,41 @@ export default function Dashboard() {
     } catch (e) { console.error(e); }
   };
 
+  const handleAddCategory = () => {
+    setCategoryForm({ id: '', name: '' });
+    setIsCategoryModalOpen(true);
+  };
+
+  const handleEditCategory = (id: string) => {
+    const category = categories.find(c => c.id === id);
+    if (!category) return;
+    setCategoryForm(category);
+    setIsCategoryModalOpen(true);
+  };
+
+  const handleSaveCategory = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      if (categoryForm.id) {
+        await updateCategory(categoryForm.id, categoryForm);
+        setCategories(categories.map(c => c.id === categoryForm.id ? categoryForm : c));
+      } else {
+        const { id, ...data } = categoryForm;
+        const c = await addCategory(data);
+        setCategories([...categories, c]);
+      }
+      setIsCategoryModalOpen(false);
+    } catch(e) { console.error(e); }
+  };
+
+  const handleDeleteCategory = async (id: string) => {
+    if (!window.confirm("Are you sure you want to delete this category?")) return;
+    try {
+      await deleteCategory(id);
+      setCategories(categories.filter(c => c.id !== id));
+    } catch(e) { console.error(e); }
+  };
+
   const handleResolveChange = async (id: string, action: 'approve' | 'reject', changeData: any) => {
     try {
       await resolvePendingChange(id, action, changeData);
@@ -391,6 +436,9 @@ export default function Dashboard() {
               </button>
               
               <div className="w-full h-px bg-emerald-800 my-2 hidden md:block"></div>
+              <button onClick={() => setActiveTab('categories')} className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors shrink-0 ${activeTab === 'categories' ? 'bg-white/10 text-white' : 'hover:bg-white/5 text-emerald-100'}`}>
+                <Layers className="w-5 h-5 shrink-0" /> <span className="hidden md:inline">Categories</span>
+              </button>
               <button onClick={() => setActiveTab('approvals')} className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors shrink-0 ${activeTab === 'approvals' ? 'bg-white/10 text-white' : 'hover:bg-white/5 text-emerald-100'}`}>
                 <Clock className="w-5 h-5 shrink-0" /> <span className="hidden md:inline">Approvals <span className="ml-2 bg-emerald-500 text-white text-xs px-2 py-0.5 rounded-full">{pendingChanges.length}</span></span>
               </button>
@@ -949,6 +997,69 @@ export default function Dashboard() {
           </div>
         )}
         
+        {activeTab === 'categories' && user.role === 'admin' && (
+          <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+            <div className="p-6 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
+              <h2 className="text-xl font-bold text-gray-900">Manage Categories</h2>
+              <button onClick={handleAddCategory} className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-emerald-700">
+                <PlusCircle className="w-4 h-4" /> Add Category
+              </button>
+            </div>
+            <div className="p-0">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-gray-50 border-b border-gray-100 text-sm">
+                    <th className="px-6 py-4 font-bold text-gray-700">Category Name</th>
+                    <th className="px-6 py-4 font-bold text-gray-700 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {categories.map((cat: any) => (
+                    <tr key={cat.id || cat.name} className="hover:bg-gray-50/50 transition-colors">
+                      <td className="px-6 py-4 font-bold text-gray-900">
+                        {cat.name}
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        {cat.id && (
+                          <>
+                            <button onClick={() => handleEditCategory(cat.id)} className="text-emerald-600 hover:text-emerald-800 font-medium mr-3"><Edit className="w-4 h-4 inline-block mb-1"/> Edit</button>
+                            <button onClick={() => handleDeleteCategory(cat.id)} className="text-red-600 hover:text-red-800 font-medium"><Trash2 className="w-4 h-4 inline-block mb-1"/> Delete</button>
+                          </>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                  {categories.length === 0 && (
+                    <tr><td colSpan={2} className="px-6 py-8 text-center text-gray-500">No categories found.</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+        
+        {/* Category Modal */}
+        {isCategoryModalOpen && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-3xl p-6 md:p-8 w-full max-w-sm">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-bold text-gray-900">{categoryForm.id ? 'Edit Category' : 'Add New Category'}</h3>
+                <button onClick={() => setIsCategoryModalOpen(false)} className="text-gray-500 hover:text-gray-700"><X className="w-6 h-6" /></button>
+              </div>
+              <form onSubmit={handleSaveCategory} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Category Name</label>
+                  <input required type="text" value={categoryForm.name} onChange={e => setCategoryForm({...categoryForm, name: e.target.value})} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2 focus:ring-2 focus:ring-emerald-500 outline-none" />
+                </div>
+                <div className="flex justify-end gap-3 mt-6">
+                  <button type="button" onClick={() => setIsCategoryModalOpen(false)} className="px-5 py-2.5 rounded-xl font-medium text-gray-700 bg-gray-100 hover:bg-gray-200">Cancel</button>
+                  <button type="submit" className="px-5 py-2.5 rounded-xl font-medium text-white bg-emerald-600 hover:bg-emerald-700">Save</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
         {/* Product Modal */}
         {isProductModalOpen && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
@@ -968,8 +1079,8 @@ export default function Dashboard() {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
                     <select required value={productForm.category} onChange={e => setProductForm({...productForm, category: e.target.value})} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2 focus:ring-2 focus:ring-emerald-500 outline-none">
-                      {categories.map((cat, idx) => <option key={idx} value={cat}>{cat}</option>)}
-                      {!categories.includes(productForm.category) && productForm.category && <option value={productForm.category}>{productForm.category}</option>}
+                      {categories.map((cat, idx) => <option key={idx} value={cat.name}>{cat.name}</option>)}
+                      {!categories.some((c: any) => c.name === productForm.category) && productForm.category && <option value={productForm.category}>{productForm.category}</option>}
                     </select>
                   </div>
                   <div>

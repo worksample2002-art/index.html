@@ -98,8 +98,45 @@ export async function deleteProduct(id: string) {
 }
 
 // Categories
+const initialCategories = [
+  { id: "1", name: "Cream Biscuits" },
+  { id: "2", name: "Chocolate Biscuits" },
+  { id: "3", name: "Butter Cookies" },
+  { id: "4", name: "Digestive Biscuits" },
+  { id: "5", name: "Crackers" },
+  { id: "6", name: "Kids Biscuits" },
+  { id: "7", name: "Premium Biscuits" },
+  { id: "8", name: "Sugar-Free Biscuits" }
+];
+
 export async function getCategories() {
-  return ["Cream Biscuits", "Chocolate Biscuits", "Butter Cookies", "Digestive Biscuits", "Crackers", "Kids Biscuits", "Premium Biscuits", "Sugar-Free Biscuits"];
+  await checkAndSeed();
+  try {
+    const snap = await getDocs(collection(db, "categories"));
+    if (snap.empty) {
+      for (const cat of initialCategories) {
+        await setDoc(doc(db, "categories", cat.id), cat);
+      }
+      return initialCategories;
+    }
+    return snap.docs.map(d => ({ id: d.id, ...d.data() } as any));
+  } catch(e) {
+    return initialCategories;
+  }
+}
+
+export async function addCategory(category: any) {
+  const newId = Date.now().toString();
+  await setDoc(doc(db, "categories", newId), { ...category, id: newId });
+  return { ...category, id: newId };
+}
+
+export async function updateCategory(id: string, updates: any) {
+  await updateDoc(doc(db, "categories", id), updates);
+}
+
+export async function deleteCategory(id: string) {
+  await deleteDoc(doc(db, "categories", id));
 }
 
 // Brands
