@@ -3,21 +3,24 @@ import { useAuthStore } from '../store';
 import { useContentStore } from '../store/contentStore';
 import { useNavigate } from 'react-router-dom';
 import { 
-  getProducts, getOrders, getVouchers, getBanners, getBrands, getCompanyInfo,
+  getProducts, getOrders, getVouchers, getBanners, getBrands, getCompanyInfo, getCategories,
   addProduct, deleteProduct, updateProduct,
   addBrand, updateBrand as updateBrandAPI, deleteBrand as deleteBrandAPI,
   updateCompanyInfo,
   addBanner, updateBanner, deleteBanner,
-  updateOrderStatus, addVoucher, updateVoucher, deleteVoucher
+  updateOrderStatus, addVoucher, updateVoucher, deleteVoucher,
+  submitPendingChange, getPendingChanges, resolvePendingChange,
+  getSubAdmins, addSubAdmin, deleteSubAdmin
 } from '../lib/api';
-import { LogOut, LayoutDashboard, Package, Users, Settings as SettingsIcon, PlusCircle, FileText, Check, ShoppingCart, Tag, Trash2, Edit, Image as ImageIcon, Briefcase, Star } from 'lucide-react';
+import ImageUploader from '../components/ImageUploader';
+import { LogOut, LayoutDashboard, Package, Users, Settings as SettingsIcon, PlusCircle, FileText, Check, ShoppingCart, Tag, Trash2, Edit, Image as ImageIcon, Briefcase, Star, X, Shield, Clock } from 'lucide-react';
 
 export default function Dashboard() {
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('overview');
   
-  const { pages, updatePage, addPage, deletePage } = useContentStore();
+  const { pages, updatePage, addPage, deletePage, settings, updateSettings } = useContentStore();
   const [editingPageSlug, setEditingPageSlug] = useState('privacy');
   const [pageContentTemp, setPageContentTemp] = useState(pages['privacy']?.content || '');
 
@@ -28,81 +31,113 @@ export default function Dashboard() {
   const [banners, setBanners] = useState<any[]>([]);
   const [brands, setBrands] = useState<any[]>([]);
   const [companyInfo, setCompanyInfo] = useState<any>(null);
-  const [settings, setSettings] = useState<{key: string, value: string}[]>([]);
+
+  const [categories, setCategories] = useState<string[]>([]);
+  const [isProductModalOpen, setIsProductModalOpen] = useState(false);
+  const [productForm, setProductForm] = useState<any>({
+    id: '', name: '', price: '100', stock: '50', category: '', image: '', description: '', brand: 'Bazar'
+  });
+
+  const [isBannerModalOpen, setIsBannerModalOpen] = useState(false);
+  const [bannerForm, setBannerForm] = useState<any>({
+    id: '', title: '', description: '', link: '', image: ''
+  });
+
+  const [isBrandModalOpen, setIsBrandModalOpen] = useState(false);
+  const [brandForm, setBrandForm] = useState<any>({
+    id: '', name: '', image: ''
+  });
+
+  const [isSubAdminModalOpen, setIsSubAdminModalOpen] = useState(false);
+  const [subAdminForm, setSubAdminForm] = useState<any>({
+    name: '', username: '', password: '', permissions: 'products,orders'
+  });
+
+  const [subadmins, setSubadmins] = useState<any[]>([]);
+  const [pendingChanges, setPendingChanges] = useState<any[]>([]);
 
   useEffect(() => {
-    const s = localStorage.getItem('adminSettings');
-    if(s) setSettings(JSON.parse(s));
-  }, []);
-
-  useEffect(() => {
-    if (user?.role === 'admin') {
+    if (user?.role === 'admin' || user?.role === 'subadmin') {
       getProducts().then(setProducts);
       getOrders().then(setOrders);
       getVouchers().then(setVouchers);
       getBanners().then(setBanners);
       getBrands().then(setBrands);
       getCompanyInfo().then(setCompanyInfo);
+      getCategories().then(setCategories);
+    }
+    if (user?.role === 'admin') {
+      getSubAdmins().then(setSubadmins);
+      getPendingChanges().then(setPendingChanges);
     }
   }, [user]);
 
-  const handleAddProduct = async () => {
-    const name = window.prompt("Enter new product name:");
-    if (!name) return;
-    const priceStr = window.prompt("Enter price:") || "100";
-    const stockStr = window.prompt("Enter stock:") || "50";
-    const category = window.prompt("Enter category (e.g. Premium Biscuits):") || "Premium Biscuits";
-    const image = window.prompt("Enter image URL:") || "";
-    const description = window.prompt("Enter product description:") || "";
-    
+  const handleAddProduct = () => {
+    setProductForm({ id: '', name: '', price: '100', stock: '50', category: categories[0] || 'Premium Biscuits', image: '', description: '', brand: 'Bazar' });
+    setIsProductModalOpen(true);
+  };
+
+  const handleEditProduct = (id: string) => {
+    const product = products.find(p => p.id === id);
+    if (!product) return;
+    setProductForm({ ...product, price: product.price.toString(), stock: product.stock?.toString() || '0' });
+    setIsProductModalOpen(true);
+  };
+
+  const handleSaveProduct = async (e: React.FormEvent) => {
+    e.preventDefault();
     try {
-      const p = await addProduct({ 
-        name, 
-        price: parseInt(priceStr), 
-        stock: parseInt(stockStr), 
-        category, 
-        image, 
-        description, 
-        rating: 5, 
-        reviews: 0, 
-        brand: 'Bazar' 
-      });
-      setProducts([...products, p]);
-    } catch(e) { console.error(e); }
+      const price = parseInt(productForm.price);
+      const stock = parseInt(productForm.stock);
+      const payload = { ...productForm, price, stock };
+      delete payload.id;
+      
+      if (user?.role === 'subadmin') {
+        const changePayload = productForm.id ? { ...payload } : { ...payload, rating: 5, reviews: 0 };
+        await submitPendingChange({ 
+          type: productForm.id ? 'edit_product' : 'add_product', 
+          docId: productForm.id || null, 
+          payload: changePayload, 
+          submittedBy: user.id,
+          submittedByName: user.name || 'Sub Admin'
+        });
+        alert('Product change submitted for admin approval.');
+      } else {
+        if (productForm.id) {
+          await updateProduct(productForm.id, payload);
+          setProducts(products.map(p => p.id === productForm.id ? { id: productForm.id, ...payload } : p));
+        } else {
+          const p = await addProduct({ ...payload, rating: 5, reviews: 0 });
+          setProducts([...products, p]);
+        }
+      }
+      setIsProductModalOpen(false);
+    } catch(e) { console.error("Error saving product:", e); }
   };
 
   const handleDeleteProduct = async (id: string) => {
     if (!window.confirm("Are you sure?")) return;
     try {
-      await deleteProduct(id);
-      setProducts(products.filter(p => p.id !== id));
+      if (user?.role === 'subadmin') {
+        await submitPendingChange({ type: 'delete_product', docId: id, submittedBy: user.id, submittedByName: user.name || 'Sub Admin' });
+        alert('Product deletion submitted for admin approval.');
+      } else {
+        await deleteProduct(id);
+        setProducts(products.filter(p => p.id !== id));
+      }
     } catch(e) { console.error(e); }
   };
 
   const handleUpdateOrderStatus = async (id: string, status: string) => {
     try {
-      await updateOrderStatus(id, status);
-      setOrders(orders.map(o => o.id === id ? { ...o, status } : o));
+      if (user?.role === 'subadmin') {
+        await submitPendingChange({ type: 'update_order', docId: id, payload: { status }, submittedBy: user.id, submittedByName: user.name || 'Sub Admin' });
+        alert('Order status change submitted for admin approval.');
+      } else {
+        await updateOrderStatus(id, status);
+        setOrders(orders.map(o => o.id === id ? { ...o, status } : o));
+      }
     } catch(e) { console.error(e) }
-  };
-
-  const handleEditProduct = async (id: string) => {
-    const product = products.find(p => p.id === id);
-    if (!product) return;
-    const name = window.prompt("Enter new product name:", product.name);
-    if (!name) return;
-    const priceStr = window.prompt("Enter price:", product.price.toString());
-    const stockStr = window.prompt("Enter stock:", product.stock?.toString() || "0");
-    if (!priceStr || !stockStr) return;
-    
-    try {
-      const price = parseInt(priceStr);
-      const stock = parseInt(stockStr);
-      await updateProduct(id, { name, price, stock });
-      setProducts(products.map(p => p.id === id ? { ...p, name, price, stock } : p));
-    } catch (e) {
-      console.error("Error updating product:", e);
-    }
   };
 
   const handleAddVoucher = async () => {
@@ -135,33 +170,30 @@ export default function Dashboard() {
     } catch(e) { console.error(e) }
   };
 
-  const handleAddBanner = async () => {
-    const title = window.prompt("Enter banner title:");
-    if (!title) return;
-    const description = window.prompt("Enter banner description (optional):") || "";
-    const link = window.prompt("Enter promotional link/URL (optional):") || "";
-    const image = window.prompt("Enter image URL:");
-    if (!image) return;
-    try {
-      const b = await addBanner({ title, description, link, image });
-      setBanners([...banners, b]);
-    } catch(e) { console.error(e); }
+  const handleAddBanner = () => {
+    setBannerForm({ id: '', title: '', description: '', link: '', image: '' });
+    setIsBannerModalOpen(true);
   };
 
-  const handleEditBanner = async (id: string) => {
+  const handleEditBanner = (id: string) => {
     const banner = banners.find(b => b.id === id);
     if (!banner) return;
-    const title = window.prompt("Enter new banner title:", banner.title);
-    if (title === null) return;
-    const description = window.prompt("Enter banner description:", banner.description || "");
-    if (description === null) return;
-    const link = window.prompt("Enter promotional link/URL:", banner.link || "");
-    if (link === null) return;
-    const image = window.prompt("Enter new image URL:", banner.image);
-    if (image === null) return;
+    setBannerForm(banner);
+    setIsBannerModalOpen(true);
+  };
+
+  const handleSaveBanner = async (e: React.FormEvent) => {
+    e.preventDefault();
     try {
-      await updateBanner(id, { title, description, link, image });
-      setBanners(banners.map(b => b.id === id ? { ...b, title, description, link, image } : b));
+      if (bannerForm.id) {
+        await updateBanner(bannerForm.id, bannerForm);
+        setBanners(banners.map(b => b.id === bannerForm.id ? bannerForm : b));
+      } else {
+        const { id, ...data } = bannerForm;
+        const b = await addBanner(data);
+        setBanners([...banners, b]);
+      }
+      setIsBannerModalOpen(false);
     } catch(e) { console.error(e); }
   };
 
@@ -205,27 +237,30 @@ export default function Dashboard() {
     }
   };
 
-  const handleAddBrand = async () => {
-    const name = window.prompt("Enter brand name:");
-    if (!name) return;
-    const image = window.prompt("Enter brand image URL:");
-    if (!image) return;
-    try {
-      const b = await addBrand({ name, image });
-      setBrands([...brands, b]);
-    } catch(e) { console.error(e); }
+  const handleAddBrand = () => {
+    setBrandForm({ id: '', name: '', image: '' });
+    setIsBrandModalOpen(true);
   };
 
-  const handleEditBrand = async (id: string) => {
+  const handleEditBrand = (id: string) => {
     const b = brands.find(b => b.id === id);
     if (!b) return;
-    const name = window.prompt("Enter new brand name:", b.name);
-    if (name === null) return;
-    const image = window.prompt("Enter new brand image URL:", b.image);
-    if (image === null) return;
+    setBrandForm(b);
+    setIsBrandModalOpen(true);
+  };
+
+  const handleSaveBrand = async (e: React.FormEvent) => {
+    e.preventDefault();
     try {
-      await updateBrandAPI(id, { name, image });
-      setBrands(brands.map(br => br.id === id ? { ...br, name, image } : br));
+      if (brandForm.id) {
+        await updateBrandAPI(brandForm.id, brandForm);
+        setBrands(brands.map(b => b.id === brandForm.id ? brandForm : b));
+      } else {
+        const { id, ...data } = brandForm;
+        const b = await addBrand(data);
+        setBrands([...brands, b]);
+      }
+      setIsBrandModalOpen(false);
     } catch(e) { console.error(e); }
   };
 
@@ -242,6 +277,50 @@ export default function Dashboard() {
     try {
       await updateCompanyInfo(companyInfo);
       alert('Company info saved successfully!');
+    } catch(e) { console.error(e); }
+  };
+
+  const handleAddSubadmin = () => {
+    setSubAdminForm({ name: '', username: '', password: '', permissions: 'products,orders' });
+    setIsSubAdminModalOpen(true);
+  };
+
+  const handleSaveSubadmin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const permissions = subAdminForm.permissions ? subAdminForm.permissions.split(',').map((p: string) => p.trim()) : [];
+      const sa = await addSubAdmin({ ...subAdminForm, permissions });
+      setSubadmins([...subadmins, sa]);
+      setIsSubAdminModalOpen(false);
+    } catch (e) { console.error(e); }
+  };
+
+  const handleDeleteSubadmin = async (id: string) => {
+    if (!window.confirm("Are you sure you want to delete this sub-admin?")) return;
+    try {
+      await deleteSubAdmin(id);
+      setSubadmins(subadmins.filter(s => s.id !== id));
+    } catch (e) { console.error(e); }
+  };
+
+  const handleResolveChange = async (id: string, action: 'approve' | 'reject', changeData: any) => {
+    try {
+      await resolvePendingChange(id, action, changeData);
+      setPendingChanges(pendingChanges.filter(c => c.id !== id));
+      
+      // Update local state if approved
+      if (action === 'approve') {
+        if (changeData.type === 'add_product') {
+          setProducts([...products, { id: changeData.docId || Date.now().toString(), ...changeData.payload }]);
+        } else if (changeData.type === 'edit_product') {
+          setProducts(products.map(p => p.id === changeData.docId ? { ...p, ...changeData.payload } : p));
+        } else if (changeData.type === 'delete_product') {
+          setProducts(products.filter(p => p.id !== changeData.docId));
+        } else if (changeData.type === 'update_order') {
+          setOrders(orders.map(o => o.id === changeData.docId ? { ...o, status: changeData.payload.status } : o));
+        }
+        alert('Change approved successfully!');
+      }
     } catch(e) { console.error(e); }
   };
 
@@ -272,17 +351,26 @@ export default function Dashboard() {
             <LayoutDashboard className="w-5 h-5 shrink-0" /> <span className="hidden md:inline">Overview</span>
           </button>
           
+          {(user.role === 'admin' || user.permissions?.includes('products')) && (
+            <button onClick={() => setActiveTab('products')} className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors shrink-0 ${activeTab === 'products' ? 'bg-white/10 text-white' : 'hover:bg-white/5 text-emerald-100'}`}>
+              <Package className="w-5 h-5 shrink-0" /> <span className="hidden md:inline">Products</span>
+            </button>
+          )}
+
+          {user.role === 'admin' && (
+             <button onClick={() => setActiveTab('customers')} className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors shrink-0 ${activeTab === 'customers' ? 'bg-white/10 text-white' : 'hover:bg-white/5 text-emerald-100'}`}>
+               <Users className="w-5 h-5 shrink-0" /> <span className="hidden md:inline">Customers</span>
+             </button>
+          )}
+
+          {(user.role === 'admin' || user.permissions?.includes('orders')) && (
+            <button onClick={() => setActiveTab('orders')} className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors shrink-0 ${activeTab === 'orders' ? 'bg-white/10 text-white' : 'hover:bg-white/5 text-emerald-100'}`}>
+              <ShoppingCart className="w-5 h-5 shrink-0" /> <span className="hidden md:inline">Orders</span>
+            </button>
+          )}
+
           {user.role === 'admin' && (
             <>
-              <button onClick={() => setActiveTab('products')} className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors shrink-0 ${activeTab === 'products' ? 'bg-white/10 text-white' : 'hover:bg-white/5 text-emerald-100'}`}>
-                <Package className="w-5 h-5 shrink-0" /> <span className="hidden md:inline">Products</span>
-              </button>
-              <button onClick={() => setActiveTab('customers')} className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors shrink-0 ${activeTab === 'customers' ? 'bg-white/10 text-white' : 'hover:bg-white/5 text-emerald-100'}`}>
-                <Users className="w-5 h-5 shrink-0" /> <span className="hidden md:inline">Customers</span>
-              </button>
-              <button onClick={() => setActiveTab('orders')} className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors shrink-0 ${activeTab === 'orders' ? 'bg-white/10 text-white' : 'hover:bg-white/5 text-emerald-100'}`}>
-                <ShoppingCart className="w-5 h-5 shrink-0" /> <span className="hidden md:inline">Orders</span>
-              </button>
               <button onClick={() => setActiveTab('vouchers')} className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors shrink-0 ${activeTab === 'vouchers' ? 'bg-white/10 text-white' : 'hover:bg-white/5 text-emerald-100'}`}>
                 <Tag className="w-5 h-5 shrink-0" /> <span className="hidden md:inline">Vouchers</span>
               </button>
@@ -300,6 +388,14 @@ export default function Dashboard() {
               </button>
               <button onClick={() => setActiveTab('settings')} className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors shrink-0 ${activeTab === 'settings' ? 'bg-white/10 text-white' : 'hover:bg-white/5 text-emerald-100'}`}>
                 <SettingsIcon className="w-5 h-5 shrink-0" /> <span className="hidden md:inline">Settings</span>
+              </button>
+              
+              <div className="w-full h-px bg-emerald-800 my-2 hidden md:block"></div>
+              <button onClick={() => setActiveTab('approvals')} className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors shrink-0 ${activeTab === 'approvals' ? 'bg-white/10 text-white' : 'hover:bg-white/5 text-emerald-100'}`}>
+                <Clock className="w-5 h-5 shrink-0" /> <span className="hidden md:inline">Approvals <span className="ml-2 bg-emerald-500 text-white text-xs px-2 py-0.5 rounded-full">{pendingChanges.length}</span></span>
+              </button>
+              <button onClick={() => setActiveTab('subadmins')} className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors shrink-0 ${activeTab === 'subadmins' ? 'bg-white/10 text-white' : 'hover:bg-white/5 text-emerald-100'}`}>
+                <Shield className="w-5 h-5 shrink-0" /> <span className="hidden md:inline">Sub Admins</span>
               </button>
             </>
           )}
@@ -606,8 +702,13 @@ export default function Dashboard() {
                     <textarea value={companyInfo.mdMessage} onChange={e => setCompanyInfo({...companyInfo, mdMessage: e.target.value})} rows={4} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-gray-900" />
                   </div>
                   <div className="col-span-1 md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">MD Image URL</label>
-                    <input type="text" value={companyInfo.mdImage} onChange={e => setCompanyInfo({...companyInfo, mdImage: e.target.value})} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-gray-900" />
+                    <ImageUploader 
+                      label="MD Image URL"
+                      recommendedSize="400x400 px"
+                      maxKB={500}
+                      value={companyInfo.mdImage} 
+                      onChange={(url) => setCompanyInfo({...companyInfo, mdImage: url})} 
+                    />
                   </div>
                   <div className="col-span-1 md:col-span-2">
                     <label className="block text-sm font-medium text-gray-700 mb-2">Company History</label>
@@ -713,48 +814,292 @@ export default function Dashboard() {
 
         {activeTab === 'settings' && (
           <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
-            <div className="p-6 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
+            <div className="p-6 border-b border-gray-100 bg-gray-50/50">
               <h2 className="text-xl font-bold text-gray-900">Platform Settings</h2>
-              <button onClick={() => {
-                const key = window.prompt("Enter setting key (e.g., 'API_KEY'):");
-                if(!key) return;
-                const value = window.prompt("Enter setting value:");
-                if(!value) return;
-                const updated = [...settings, { key, value }];
-                setSettings(updated);
-                localStorage.setItem('adminSettings', JSON.stringify(updated));
-              }} className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-medium">Add Setting</button>
             </div>
             <div className="p-6 md:p-8">
-              <div className="space-y-4">
-                {settings.map((s, idx) => (
-                  <div key={idx} className="flex items-center justify-between bg-gray-50 p-4 rounded-xl border border-gray-200 hover:border-emerald-500 transition-colors">
-                    <div>
-                      <p className="text-sm font-bold text-gray-900 mb-1">{s.key}</p>
-                      <p className="text-sm text-gray-500">{s.value}</p>
-                    </div>
-                    <div className="flex gap-2">
-                       <button onClick={() => {
-                         const val = window.prompt("Enter new value:", s.value);
-                         if(val !== null) {
-                           const newSet = [...settings];
-                           newSet[idx].value = val;
-                           setSettings(newSet);
-                           localStorage.setItem('adminSettings', JSON.stringify(newSet));
-                         }
-                       }} className="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex justify-center items-center"><Edit className="w-4 h-4"/></button>
-                       <button onClick={() => {
-                         if(window.confirm("Delete setting?")) {
-                           const newSet = settings.filter((_, i) => i !== idx);
-                           setSettings(newSet);
-                           localStorage.setItem('adminSettings', JSON.stringify(newSet));
-                         }
-                       }} className="w-8 h-8 rounded-full bg-red-50 text-red-600 flex justify-center items-center"><Trash2 className="w-4 h-4"/></button>
-                    </div>
+              <form className="max-w-2xl space-y-6" onSubmit={(e) => { e.preventDefault(); alert('Settings saved successfully!'); }}>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Store Name</label>
+                    <input type="text" value={settings.storeName} onChange={e => updateSettings({ storeName: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-gray-900" />
                   </div>
-                ))}
-                {settings.length === 0 && <p className="text-center text-gray-500">No custom settings configured.</p>}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Support Email</label>
+                    <input type="email" value={settings.supportEmail} onChange={e => updateSettings({ supportEmail: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-gray-900" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Support Phone</label>
+                    <input type="text" value={settings.supportPhone} onChange={e => updateSettings({ supportPhone: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-gray-900" />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Address</label>
+                    <input type="text" value={settings.address} onChange={e => updateSettings({ address: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-gray-900" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Facebook URL</label>
+                    <input type="url" value={settings.facebookUrl} onChange={e => updateSettings({ facebookUrl: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-gray-900" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Twitter URL</label>
+                    <input type="url" value={settings.twitterUrl} onChange={e => updateSettings({ twitterUrl: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-gray-900" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Instagram URL</label>
+                    <input type="url" value={settings.instagramUrl} onChange={e => updateSettings({ instagramUrl: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-gray-900" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Copyright Text</label>
+                    <input type="text" value={settings.copyrightText} onChange={e => updateSettings({ copyrightText: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-gray-900" />
+                  </div>
+                </div>
+                <div className="pt-4 flex justify-end">
+                  <button type="submit" className="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition-colors shadow-sm flex items-center gap-2">
+                    <Check className="w-5 h-5" /> Save Changes
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+        {activeTab === 'approvals' && (
+          <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+            <div className="p-6 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
+              <h2 className="text-xl font-bold text-gray-900">Pending Approvals</h2>
+            </div>
+            <div className="p-0">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-gray-50 border-b border-gray-100 text-sm">
+                    <th className="px-6 py-4 font-bold text-gray-700">Type</th>
+                    <th className="px-6 py-4 font-bold text-gray-700">Submited By</th>
+                    <th className="px-6 py-4 font-bold text-gray-700">Details</th>
+                    <th className="px-6 py-4 font-bold text-gray-700 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {pendingChanges.map((change: any) => (
+                    <tr key={change.id} className="hover:bg-gray-50/50 transition-colors">
+                      <td className="px-6 py-4">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold capitalize bg-blue-100 text-blue-800">
+                           {change.type.replace('_', ' ')}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-sm font-medium text-gray-900">{change.submittedByName}</td>
+                      <td className="px-6 py-4 text-sm text-gray-500 max-w-sm truncate">
+                        {JSON.stringify(change.payload || change.docId)}
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <button onClick={() => handleResolveChange(change.id, 'approve', change)} className="text-emerald-600 hover:text-emerald-800 font-medium mr-3"><Check className="w-4 h-4 inline-block mb-1"/> Approve</button>
+                        <button onClick={() => handleResolveChange(change.id, 'reject', change)} className="text-red-600 hover:text-red-800 font-medium"><X className="w-4 h-4 inline-block mb-1"/> Reject</button>
+                      </td>
+                    </tr>
+                  ))}
+                  {pendingChanges.length === 0 && (
+                    <tr><td colSpan={4} className="px-6 py-8 text-center text-gray-500">No pending approvals.</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'subadmins' && (
+          <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+            <div className="p-6 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
+              <h2 className="text-xl font-bold text-gray-900">Manage Sub Admins</h2>
+              <button onClick={handleAddSubadmin} className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-emerald-700">
+                <PlusCircle className="w-4 h-4" /> Add Sub Admin
+              </button>
+            </div>
+            <div className="p-0">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-gray-50 border-b border-gray-100 text-sm">
+                    <th className="px-6 py-4 font-bold text-gray-700">Name / Username</th>
+                    <th className="px-6 py-4 font-bold text-gray-700">Permissions</th>
+                    <th className="px-6 py-4 font-bold text-gray-700 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {subadmins.map((adm: any) => (
+                    <tr key={adm.id} className="hover:bg-gray-50/50 transition-colors">
+                      <td className="px-6 py-4">
+                        <div className="font-bold text-gray-900">{adm.name}</div>
+                        <div className="text-sm text-gray-500">@{adm.username}</div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex gap-1 flex-wrap">
+                          {adm.permissions?.map((p: string) => (
+                            <span key={p} className="px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs font-medium uppercase">{p}</span>
+                          ))}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <button onClick={() => handleDeleteSubadmin(adm.id)} className="text-red-600 hover:text-red-800 font-medium"><Trash2 className="w-4 h-4 inline-block mb-1"/> Remove</button>
+                      </td>
+                    </tr>
+                  ))}
+                  {subadmins.length === 0 && (
+                    <tr><td colSpan={3} className="px-6 py-8 text-center text-gray-500">No sub-admins found.</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+        
+        {/* Product Modal */}
+        {isProductModalOpen && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-3xl p-6 md:p-8 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-bold text-gray-900">{productForm.id ? 'Edit Product' : 'Add New Product'}</h3>
+                <button onClick={() => setIsProductModalOpen(false)} className="text-gray-500 hover:text-gray-700">
+                  <X className="w-6 h-6" />
+                </button>
               </div>
+              <form onSubmit={handleSaveProduct} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                    <input required type="text" value={productForm.name} onChange={e => setProductForm({...productForm, name: e.target.value})} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2 focus:ring-2 focus:ring-emerald-500 outline-none" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                    <select required value={productForm.category} onChange={e => setProductForm({...productForm, category: e.target.value})} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2 focus:ring-2 focus:ring-emerald-500 outline-none">
+                      {categories.map((cat, idx) => <option key={idx} value={cat}>{cat}</option>)}
+                      {!categories.includes(productForm.category) && productForm.category && <option value={productForm.category}>{productForm.category}</option>}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Price (৳)</label>
+                    <input required type="number" value={productForm.price} onChange={e => setProductForm({...productForm, price: e.target.value})} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2 focus:ring-2 focus:ring-emerald-500 outline-none" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Stock</label>
+                    <input required type="number" value={productForm.stock} onChange={e => setProductForm({...productForm, stock: e.target.value})} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2 focus:ring-2 focus:ring-emerald-500 outline-none" />
+                  </div>
+                  <div className="md:col-span-2">
+                    <ImageUploader 
+                      label="Product Image"
+                      recommendedSize="800x800 px"
+                      maxKB={500}
+                      value={productForm.image} 
+                      onChange={(url) => setProductForm({...productForm, image: url})} 
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                    <textarea rows={3} value={productForm.description} onChange={e => setProductForm({...productForm, description: e.target.value})} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2 focus:ring-2 focus:ring-emerald-500 outline-none" />
+                  </div>
+                </div>
+                <div className="flex justify-end gap-3 mt-6">
+                  <button type="button" onClick={() => setIsProductModalOpen(false)} className="px-5 py-2.5 rounded-xl font-medium text-gray-700 bg-gray-100 hover:bg-gray-200">Cancel</button>
+                  <button type="submit" className="px-5 py-2.5 rounded-xl font-medium text-white bg-emerald-600 hover:bg-emerald-700">Save Product</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Banner Modal */}
+        {isBannerModalOpen && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-3xl p-6 md:p-8 w-full max-w-xl">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-bold text-gray-900">{bannerForm.id ? 'Edit Banner' : 'Add New Banner'}</h3>
+                <button onClick={() => setIsBannerModalOpen(false)} className="text-gray-500 hover:text-gray-700"><X className="w-6 h-6" /></button>
+              </div>
+              <form onSubmit={handleSaveBanner} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
+                  <input required type="text" value={bannerForm.title} onChange={e => setBannerForm({...bannerForm, title: e.target.value})} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2 focus:ring-2 focus:ring-emerald-500 outline-none" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                  <input type="text" value={bannerForm.description} onChange={e => setBannerForm({...bannerForm, description: e.target.value})} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2 focus:ring-2 focus:ring-emerald-500 outline-none" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Promotional Link / URL</label>
+                  <input type="text" value={bannerForm.link} onChange={e => setBannerForm({...bannerForm, link: e.target.value})} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2 focus:ring-2 focus:ring-emerald-500 outline-none" />
+                </div>
+                <ImageUploader 
+                  label="Banner Image"
+                  recommendedSize="1920x600 px"
+                  maxKB={1024}
+                  value={bannerForm.image} 
+                  onChange={(url) => setBannerForm({...bannerForm, image: url})} 
+                />
+                <div className="flex justify-end gap-3 mt-6">
+                  <button type="button" onClick={() => setIsBannerModalOpen(false)} className="px-5 py-2.5 rounded-xl font-medium text-gray-700 bg-gray-100 hover:bg-gray-200">Cancel</button>
+                  <button type="submit" className="px-5 py-2.5 rounded-xl font-medium text-white bg-emerald-600 hover:bg-emerald-700">Save Banner</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Brand Modal */}
+        {isBrandModalOpen && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-3xl p-6 md:p-8 w-full max-w-sm">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-bold text-gray-900">{brandForm.id ? 'Edit Brand' : 'Add New Brand'}</h3>
+                <button onClick={() => setIsBrandModalOpen(false)} className="text-gray-500 hover:text-gray-700"><X className="w-6 h-6" /></button>
+              </div>
+              <form onSubmit={handleSaveBrand} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Brand Name</label>
+                  <input required type="text" value={brandForm.name} onChange={e => setBrandForm({...brandForm, name: e.target.value})} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2 focus:ring-2 focus:ring-emerald-500 outline-none" />
+                </div>
+                <ImageUploader 
+                  label="Brand Image"
+                  recommendedSize="400x400 px"
+                  maxKB={300}
+                  value={brandForm.image} 
+                  onChange={(url) => setBrandForm({...brandForm, image: url})} 
+                />
+                <div className="flex justify-end gap-3 mt-6">
+                  <button type="button" onClick={() => setIsBrandModalOpen(false)} className="px-5 py-2.5 rounded-xl font-medium text-gray-700 bg-gray-100 hover:bg-gray-200">Cancel</button>
+                  <button type="submit" className="px-5 py-2.5 rounded-xl font-medium text-white bg-emerald-600 hover:bg-emerald-700">Save Brand</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Sub Admin Modal */}
+        {isSubAdminModalOpen && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-3xl p-6 md:p-8 w-full max-w-md">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-bold text-gray-900">Add New Sub Admin</h3>
+                <button onClick={() => setIsSubAdminModalOpen(false)} className="text-gray-500 hover:text-gray-700"><X className="w-6 h-6" /></button>
+              </div>
+              <form onSubmit={handleSaveSubadmin} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                  <input required type="text" value={subAdminForm.name} onChange={e => setSubAdminForm({...subAdminForm, name: e.target.value})} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2 focus:ring-2 focus:ring-emerald-500 outline-none" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Username</label>
+                  <input required type="text" value={subAdminForm.username} onChange={e => setSubAdminForm({...subAdminForm, username: e.target.value})} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2 focus:ring-2 focus:ring-emerald-500 outline-none" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                  <input required type="password" value={subAdminForm.password} onChange={e => setSubAdminForm({...subAdminForm, password: e.target.value})} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2 focus:ring-2 focus:ring-emerald-500 outline-none" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Permissions (comma-separated)</label>
+                  <input type="text" placeholder="e.g., products,orders" value={subAdminForm.permissions} onChange={e => setSubAdminForm({...subAdminForm, permissions: e.target.value})} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2 focus:ring-2 focus:ring-emerald-500 outline-none" />
+                  <p className="text-xs text-gray-500 mt-1">Available permissions: products, orders, vouchers, customers, pages, etc.</p>
+                </div>
+                <div className="flex justify-end gap-3 mt-6">
+                  <button type="button" onClick={() => setIsSubAdminModalOpen(false)} className="px-5 py-2.5 rounded-xl font-medium text-gray-700 bg-gray-100 hover:bg-gray-200">Cancel</button>
+                  <button type="submit" className="px-5 py-2.5 rounded-xl font-medium text-white bg-emerald-600 hover:bg-emerald-700">Save</button>
+                </div>
+              </form>
             </div>
           </div>
         )}

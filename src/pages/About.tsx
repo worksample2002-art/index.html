@@ -2,9 +2,11 @@ import React, { useEffect, useState } from 'react';
 import { Mail, MapPin, Phone, Award, Users, ShieldCheck, Quote } from 'lucide-react';
 import { motion } from 'motion/react';
 import { getCompanyInfo } from '../lib/api';
+import { useContentStore } from '../store/contentStore';
 
 export default function About() {
   const [info, setInfo] = useState<any>(null);
+  const { settings } = useContentStore();
 
   useEffect(() => {
     getCompanyInfo().then(setInfo);
@@ -112,7 +114,7 @@ export default function About() {
                   </div>
                   <div>
                     <h4 className="font-bold">Our Location</h4>
-                    <p className="text-emerald-100/80">123 Biscuit Lane, Sweet District, Dhaka, Bangladesh</p>
+                    <p className="text-emerald-100/80">{settings.address}</p>
                   </div>
                 </div>
                 
@@ -122,7 +124,7 @@ export default function About() {
                   </div>
                   <div>
                     <h4 className="font-bold">Phone Number</h4>
-                    <p className="text-emerald-100/80">+880 1234-567890</p>
+                    <p className="text-emerald-100/80">{settings.supportPhone}</p>
                   </div>
                 </div>
                 
@@ -132,7 +134,7 @@ export default function About() {
                   </div>
                   <div>
                     <h4 className="font-bold">Email Address</h4>
-                    <p className="text-emerald-100/80">hello@biscuitbazar.com</p>
+                    <p className="text-emerald-100/80">{settings.supportEmail}</p>
                   </div>
                 </div>
               </div>

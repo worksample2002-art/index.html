@@ -2,11 +2,13 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ShoppingCart, User, Menu, Search, X, Heart } from 'lucide-react';
 import { useCartStore, useAuthStore, useWishlistStore } from '../store';
+import { useContentStore } from '../store/contentStore';
 
 export default function Navbar() {
   const items = useCartStore(state => state.items);
   const user = useAuthStore(state => state.user);
   const wishlist = useWishlistStore(state => state.wishlist);
+  const { settings } = useContentStore();
   const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -24,14 +26,18 @@ export default function Navbar() {
     }
   };
 
+  const storeNameWords = settings.storeName.split(' ');
+  const firstWord = storeNameWords[0] || 'Biscuit';
+  const restWords = storeNameWords.slice(1).join(' ') || 'Bazar';
+
   return (
     <nav className="bg-white/80 backdrop-blur-md sticky top-0 z-50 border-b border-gray-100 shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center">
             <Link to="/" className="flex items-center gap-2">
-              <span className="text-2xl font-bold text-emerald-600 tracking-tight">Biscuit</span>
-              <span className="text-2xl font-bold text-orange-500 tracking-tight">Bazar</span>
+              <span className="text-2xl font-bold text-emerald-600 tracking-tight">{firstWord}</span>
+              <span className="text-2xl font-bold text-orange-500 tracking-tight">{restWords}</span>
             </Link>
           </div>
           

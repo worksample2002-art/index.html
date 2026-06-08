@@ -1,5 +1,16 @@
 import { create } from 'zustand';
 
+export interface SiteSettings {
+  storeName: string;
+  supportEmail: string;
+  supportPhone: string;
+  address: string;
+  facebookUrl: string;
+  twitterUrl: string;
+  instagramUrl: string;
+  copyrightText: string;
+}
+
 export interface BlogPost {
   id: number;
   title: string;
@@ -17,6 +28,8 @@ interface PageContent {
 interface ContentState {
   pages: Record<string, PageContent>;
   blogs: BlogPost[];
+  settings: SiteSettings;
+  updateSettings: (newSettings: Partial<SiteSettings>) => void;
   updatePage: (slug: string, newContent: string) => void;
   addPage: (slug: string, title: string, content: string) => void;
   deletePage: (slug: string) => void;
@@ -37,9 +50,24 @@ const initialBlogs: BlogPost[] = [
   { id: 2, title: 'Health Benefits of Digestive Biscuits', excerpt: 'Why digestives should be part of your daily routine.', content: 'Full article text goes here. Made with whole wheat and fiber...', date: '2026-05-15', image: 'https://images.unsplash.com/photo-1620935105269-e05445fc6e4b?auto=format&fit=crop&w=500&q=60' }
 ];
 
+const initialSettings: SiteSettings = {
+  storeName: "Biscuit Bazar",
+  supportEmail: "hello@biscuitbazar.com",
+  supportPhone: "+880 1234-567890",
+  address: "123 Biscuit Lane, Sweet District, Dhaka, Bangladesh",
+  facebookUrl: "#",
+  twitterUrl: "#",
+  instagramUrl: "#",
+  copyrightText: "Biscuit Bazar. All rights reserved."
+};
+
 export const useContentStore = create<ContentState>((set) => ({
   pages: defaultPages,
   blogs: initialBlogs,
+  settings: initialSettings,
+  updateSettings: (newSettings) => set((state) => ({
+    settings: { ...state.settings, ...newSettings }
+  })),
   updatePage: (slug, newContent) => set((state) => ({
     pages: {
       ...state.pages,

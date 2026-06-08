@@ -187,7 +187,69 @@ export async function toggleWishlistAPI(userId: string, productId: string, isWis
   }
 }
 
-// Admin Mock Check
+// Admin Authentication
+export async function adminLogin(username: string, password: string) {
+  if (username.toLowerCase() === 'salesadmin' && password === '123456') {
+    return { token: "super_admin_token", user: { id: "super_admin", name: "Super Admin", role: "admin", permissions: ["all"] } };
+  }
+  
+  // Check sub-admins
+  const q = query(collection(db, "admins"), where("username", "==", username), where("password", "==", password));
+  const snap = await getDocs(q);
+  if (!snap.empty) {
+    const adminData = snap.docs[0].data();
+    return { 
+      token: "sub_admin_token_" + snap.docs[0].id, 
+      user: { id: snap.docs[0].id, name: adminData.name, role: "subadmin", permissions: adminData.permissions || [] } 
+    };
+  }
+  throw new Error("Invalid admin credentials");
+}
+
+export async function getSubAdmins() {
+  const snap = await getDocs(collection(db, "admins"));
+  return snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+}
+
+export async function addSubAdmin(data: any) {
+  const newRef = doc(collection(db, "admins"));
+  await setDoc(newRef, data);
+  return { id: newRef.id, ...data };
+}
+
+export async function deleteSubAdmin(id: string) {
+  await deleteDoc(doc(db, "admins", id));
+}
+
+// Pending Changes API
+export async function submitPendingChange(data: any) {
+  const newRef = doc(collection(db, "pending_changes"));
+  const changeData = { ...data, status: "pending", createdAt: new Date().toISOString() };
+  await setDoc(newRef, changeData);
+  return { id: newRef.id, ...changeData };
+}
+
+export async function getPendingChanges() {
+  const q = query(collection(db, "pending_changes"), where("status", "==", "pending"));
+  const snap = await getDocs(q);
+  return snap.docs.map(doc => ({ id: doc.id, ...doc.data() })).sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+}
+
+export async function resolvePendingChange(id: string, action: 'approve' | 'reject', actualData?: any) {
+  const ref = doc(db, "pending_changes", id);
+  if (action === 'approve' && actualData) {
+    // apply the actual change depending on type
+    const { type, payload, docId } = actualData;
+    if (type === 'add_product') await addProduct(payload);
+    else if (type === 'edit_product') await updateProduct(docId, payload);
+    else if (type === 'delete_product') await deleteProduct(docId);
+    else if (type === 'update_order') await updateOrderStatus(docId, payload.status);
+    // Add more types as needed
+  }
+  await updateDoc(ref, { status: action, resolvedAt: new Date().toISOString() });
+}
+
+// Admin Mock Check (User login)
 export async function handleLoginMock(email: string) {
   if (email === "Salesadmin") {
     return { token: "admin_token_123", user: { id: 1, name: "Admin", role: "admin" } };

@@ -32,5 +32,13 @@ service cloud.firestore {
       allow read: if true;
       allow write: if true; // Open for dev prototype
     }
+
+    match /admins/{adminId} {
+      allow read, write: if true; // Open for dev prototype
+    }
+
+    match /pending_changes/{changeId} {
+      allow read, write: if true; // Open for dev prototype
+    }
   }
 }

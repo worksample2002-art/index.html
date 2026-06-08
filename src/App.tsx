@@ -22,11 +22,17 @@ import Contact from './pages/Contact';
 import Blog from './pages/Blog';
 import Wishlist from './pages/Wishlist';
 import { useAuthStore, useWishlistStore } from './store';
+import { useContentStore } from './store/contentStore';
 import { getWishlist } from './lib/api';
 
 export default function App() {
   const user = useAuthStore(state => state.user);
   const setWishlist = useWishlistStore(state => state.setWishlist);
+  const { settings } = useContentStore();
+
+  useEffect(() => {
+    document.title = settings.storeName.toUpperCase();
+  }, [settings.storeName]);
 
   useEffect(() => {
     if (user) {

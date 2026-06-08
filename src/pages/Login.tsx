@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { handleLoginMock } from '../lib/api';
+import { handleLoginMock, adminLogin } from '../lib/api';
 import { useAuthStore } from '../store';
 import { motion } from 'motion/react';
 import { User as UserIcon, Lock, Mail, ShieldAlert } from 'lucide-react';
@@ -23,12 +23,12 @@ export default function Login() {
 
     try {
       if (isAdminMode) {
-        if (email.toLowerCase() === 'salesadmin' && password === '123456') {
-          const data = { token: "admin_token_123", user: { id: 1, name: "Admin", role: "admin" as const } };
-          loginAction(data.user, data.token);
+        try {
+          const data = await adminLogin(email, password);
+          loginAction(data.user as any, data.token);
           navigate('/dashboard');
-        } else {
-          setError('Invalid admin credentials. Try again.');
+        } catch (err: any) {
+          setError(err.message || 'Invalid admin credentials. Try again.');
         }
       } else {
         const data = await handleLoginMock(email);

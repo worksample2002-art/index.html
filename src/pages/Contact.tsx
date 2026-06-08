@@ -1,7 +1,10 @@
 import { Mail, MapPin, Phone } from 'lucide-react';
 import { motion } from 'motion/react';
+import { useContentStore } from '../store/contentStore';
 
 export default function Contact() {
+  const { settings } = useContentStore();
+
   return (
     <div className="min-h-screen bg-slate-50 py-16">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -60,7 +63,7 @@ export default function Contact() {
                   </div>
                   <div>
                     <h4 className="font-bold text-gray-900">Address</h4>
-                    <p className="text-gray-600 text-sm">123 Biscuit Lane, Sweet District, Dhaka, Bangladesh</p>
+                    <p className="text-gray-600 text-sm">{settings.address}</p>
                   </div>
                 </div>
                 
@@ -70,7 +73,7 @@ export default function Contact() {
                   </div>
                   <div>
                     <h4 className="font-bold text-gray-900">Phone</h4>
-                    <p className="text-gray-600 text-sm">+880 1234-567890</p>
+                    <p className="text-gray-600 text-sm">{settings.supportPhone}</p>
                   </div>
                 </div>
                 
@@ -80,7 +83,7 @@ export default function Contact() {
                   </div>
                   <div>
                     <h4 className="font-bold text-gray-900">Email</h4>
-                    <p className="text-gray-600 text-sm">hello@biscuitbazar.com</p>
+                    <p className="text-gray-600 text-sm">{settings.supportEmail}</p>
                   </div>
                 </div>
               </div>
