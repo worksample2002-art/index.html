@@ -1,0 +1,6 @@
+{
+  "name": "Biscuit Bazar",
+  "description": "Modern e-commerce website for selling biscuits online with product management, cart, and checkout.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

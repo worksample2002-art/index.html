@@ -1,0 +1,69 @@
+{
+  "entities": {
+    "Product": {
+      "title": "Product",
+      "description": "Product catalog item",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "price": { "type": "number" },
+        "category": { "type": "string" },
+        "image": { "type": "string" },
+        "description": { "type": "string" },
+        "rating": { "type": "number" },
+        "reviews": { "type": "number" },
+        "stock": { "type": "number" },
+        "brand": { "type": "string" }
+      }
+    },
+    "Order": {
+      "title": "Order",
+      "description": "Customer purchase order",
+      "type": "object",
+      "properties": {
+        "date": { "type": "string" },
+        "customer": { "type": "string" },
+        "total": { "type": "number" },
+        "status": { "type": "string" }
+      }
+    },
+    "Voucher": {
+      "title": "Voucher",
+      "description": "Discount voucher",
+      "type": "object",
+      "properties": {
+        "code": { "type": "string" },
+        "discount": { "type": "number" },
+        "type": { "type": "string" },
+        "active": { "type": "boolean" }
+      }
+    },
+    "Banner": {
+      "title": "Banner",
+      "description": "Homepage banner image",
+      "type": "object",
+      "properties": {
+        "image": { "type": "string" },
+        "title": { "type": "string" }
+      }
+    }
+  },
+  "firestore": {
+    "/products/{productId}": {
+      "schema": { "$ref": "#/entities/Product" },
+      "description": "List of products"
+    },
+    "/orders/{orderId}": {
+      "schema": { "$ref": "#/entities/Order" },
+      "description": "List of orders"
+    },
+    "/vouchers/{voucherId}": {
+      "schema": { "$ref": "#/entities/Voucher" },
+      "description": "List of vouchers"
+    },
+    "/banners/{bannerId}": {
+      "schema": { "$ref": "#/entities/Banner" },
+      "description": "List of banners"
+    }
+  }
+}
